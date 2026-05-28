@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Neurosymbolic AI</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121a33;
+      --panel-2: #0f1730;
+      --text: #e7ecf5;
+      --muted: #a3b1d1;
+      --accent: #5b8cff;
+      --accent-2: #77ffd6;
+      --error: #ff6b6b;
+      --user: #304ffe22;
+      --assistant: #00e5ff1a;
+      --radius: 16px;
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    html, body {
+      height: 100%;
+      background: radial-gradient(1200px 600px at 80% -10%, #1b2a6b33, transparent),
+                  radial-gradient(900px 400px at -10% 20%, #00e5ff11, transparent),
+                  var(--bg);
+      color: var(--text);
+      margin: 0;
+      font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
+    }
+    .app { height: 100%; display: grid; grid-template-rows: auto 1fr auto; max-width: 920px; margin: 0 auto; }
+    header { position: sticky; top: 0; z-index: 1; display: block; gap: 12px; padding: 16px 18px; background: linear-gradient(180deg, rgba(10,14,30,0.85), rgba(10,14,30,0.25)); backdrop-filter: blur(6px); border-bottom: 1px solid #ffffff12; }
+    header .title { font-weight: 800; letter-spacing: 0.2px; font-size: 18px; }
+
+    /* Settings bar */
+    .settings { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: end; margin-top: 10px; }
+    .field { display: grid; gap: 6px; }
+    .field label { font-size: 12px; color: var(--muted); }
+    .field input, .field select { background: var(--panel-2); color: var(--text); border: 1px solid #ffffff18; border-radius: 10px; padding: 8px 10px; outline: none; }
+    .ghost { background: transparent; color: var(--muted); border: 1px solid #ffffff22; box-shadow: none; font-weight: 600; padding: 10px 14px; border-radius: 12px; cursor: pointer; }
+    @media (max-width: 720px) { .settings { grid-template-columns: 1fr; } }
+
+    #messages { padding: 18px; overflow: auto; }
+    .msg { display: grid; grid-template-columns: 42px 1fr; gap: 10px; margin: 12px 0; }
+    .avatar { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: #ffffff12; color: var(--muted); font-weight: 700; border: 1px solid #ffffff14; }
+    .bubble { background: var(--panel); border: 1px solid #ffffff10; padding: 12px 14px; border-radius: var(--radius); box-shadow: var(--shadow); white-space: pre-wrap; word-wrap: break-word; }
+    .user .bubble { background: var(--user); border-color: #5b8cff33; }
+    .assistant .bubble { background: var(--assistant); border-color: #77ffd633; }
+    .meta { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+    .pending .bubble { position: relative; }
+    .pending .bubble:after { content: ""; position: absolute; right: 12px; bottom: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); box-shadow: 10px 0 0 var(--muted), 20px 0 0 var(--muted); animation: typing 1.2s infinite ease-in-out; }
+    @keyframes typing { 0% { opacity: .3 } 50% { opacity: 1 } 100% { opacity: .3 } }
+
+    footer { border-top: 1px solid #ffffff14; background: linear-gradient(180deg, rgba(17,25,55,0.3), rgba(17,25,55,0.15)); padding: 12px 16px 18px; }
+    form#composer { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+    textarea { resize: none; max-height: 220px; min-height: 56px; padding: 12px 14px; border-radius: 12px; border: 1px solid #ffffff1a; background: var(--panel); color: var(--text); outline: none; }
+    button { background: linear-gradient(135deg, var(--accent), #7aa4ff); color: #0b1020; font-weight: 700; border: none; padding: 12px 18px; border-radius: 12px; cursor: pointer; box-shadow: 0 6px 18px rgba(91,140,255,0.35); }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .toolbar { display: flex; gap: 10px; align-items: center; }
+    .error-badge { color: var(--error); font-weight: 600; }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">Neurosymbolic AI Demo (powered by NVIDIA and Red Hat)</div>
+      <div class="settings" role="group" aria-label="API configuration">
+        <div class="field">
+          <label for="baseUrl">Orchestrator URL</label>
+          <input id="baseUrl" type="text" placeholder="http://localhost:5000/chat" />
+        </div>
+        <div class="field">
+          <label for="llmUrl">LLM URL</label>
+          <input id="llmUrl" type="text" placeholder="http://localhost:8000/v1/chat/completions" />
+        </div>
+        <div class="field">
+          <label for="apiKey">API Key</label>
+          <input id="apiKey" type="password" placeholder="sk-..." />
+        </div>
+        <div class="field">
+          <label for="modelSelect">Model</label>
+          <select id="modelSelect">
+            <option value="">Choose a model…</option>
+            <option value="llama-3-3-70b-instruct-w8a8">Llama 3.3 70B Instruct</option>
+            <option value="RedHatAI/Llama-4-Scout-17B-16E-Instruct-quantized.w4a16t">Llama 4 Scout 17B Instruct</option>
+            <option value="NVIDIA/NVIDIA-Nemotron-Nano-12B-v2 ">NVIDIA Nemotron Nano 12B-v2</option>
+            <option value="RedHatAI/granite-3.1-8b-instruct-quantized.w8a8">Granite 3.1 8B Instruct</option>
+          </select>
+        </div>
+        <button id="clear" class="ghost" title="Clear conversation">Clear</button>
+      </div>
+    </header>
+
+    <main id="messages" aria-live="polite" aria-label="Chat transcript"></main>
+
+    <footer>
+      <form id="composer">
+        <textarea id="input" placeholder="Type a message... (Shift+Enter for newline)" rows="3"></textarea>
+        <div class="toolbar">
+          <button id="send" type="submit">Send ➤</button>
+        </div>
+      </form>
+      <div class="hint">Your prompt will be POSTed to the Orchestrator URL along with the configuration settings and prompt history.</div>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      const messagesEl = document.getElementById('messages');
+      const form = document.getElementById('composer');
+      const input = document.getElementById('input');
+      const sendBtn = document.getElementById('send');
+      const clearBtn = document.getElementById('clear');
+
+      // New config controls
+      const baseUrlEl = document.getElementById('baseUrl');
+      const llmUrlEl = document.getElementById('llmUrl');
+      const apiKeyEl = document.getElementById('apiKey');
+      const modelEl = document.getElementById('modelSelect');
+
+      const history = [];
+
+      function now() {
+        const d = new Date();
+        return d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+      }
+      function el(tag, className, text) {
+        const e = document.createElement(tag);
+        if (className) e.className = className;
+        if (text !== undefined) e.textContent = text;
+        return e;
+      }
+      function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+      function renderMessage(role, text, {pending=false, error=false} = {}) {
+        const row = el('div', `msg ${role} ${pending ? 'pending' : ''}`);
+        const avatar = el('div', 'avatar', role === 'user' ? 'U' : 'A');
+        const col = el('div');
+        const meta = el('div', 'meta');
+        meta.innerHTML = `<strong>${role === 'user' ? 'You' : 'Assistant'}</strong> · ${now()} ${error ? '<span class="error-badge">· error</span>' : ''}`;
+        const bubble = el('div', 'bubble');
+        bubble.textContent = text || (pending ? '' : '');
+        col.appendChild(meta); col.appendChild(bubble);
+        row.appendChild(avatar); row.appendChild(col);
+        messagesEl.appendChild(row);
+        scrollToBottom();
+        return { row, bubble };
+      }
+      function setBusy(busy) { sendBtn.disabled = busy; input.disabled = busy; }
+      function extractReplyFromJson(obj) {
+        if (obj == null) return '';
+        if (typeof obj === 'string') return obj;
+        if (typeof obj.reply === 'string') return obj.reply;
+        if (typeof obj.message === 'string') return obj.message;
+        if (typeof obj.content === 'string') return obj.content;
+        if (obj.choices && obj.choices[0] && obj.choices[0].message && typeof obj.choices[0].message.content === 'string') {
+          return obj.choices[0].message.content;
+        }
+        return JSON.stringify(obj, null, 2);
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+
+        renderMessage('user', text);
+        history.push({ role: 'user', content: text });
+
+        const pending = renderMessage('assistant', '', { pending: true });
+        setBusy(true);
+
+        try {
+          const payload = { message: text, history };
+          const cfg = {
+            baseUrl: (baseUrlEl.value || '').trim(),
+            llmUrl: (llmUrlEl.value || '').trim(),
+            apiKey: (apiKeyEl.value || '').trim(),
+            model: (modelEl.value || '').trim()
+          };
+          if (cfg.baseUrl || cfg.llmUrl || cfg.apiKey || cfg.model) payload.config = cfg;
+
+          const res = await fetch(cfg.baseUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+          const ct = (res.headers.get('content-type') || '').toLowerCase();
+          let reply = '';
+          if (ct.includes('application/json')) {
+            const data = await res.json();
+            reply = extractReplyFromJson(data);
+          } else {
+            reply = await res.text();
+          }
+
+          pending.bubble.textContent = reply;
+          pending.row.classList.remove('pending');
+          history.push({ role: 'assistant', content: reply });
+        } catch (err) {
+          pending.bubble.textContent = `Error: ${err.message}`;
+        } finally {
+          setBusy(false);
+          input.value = '';
+          input.focus();
+        }
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+      });
+      const autoSize = () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 220) + 'px'; };
+      ['input', 'change'].forEach(ev => input.addEventListener(ev, autoSize));
+      autoSize();
+
+      clearBtn.addEventListener('click', () => { messagesEl.innerHTML = ''; history.length = 0; input.focus(); });
+
+      renderMessage('assistant', 'Hi!\n\nTo get started, configure the system above by entering the Orchestrator URL, LLM URL, API Key and Model.\n\nThen enter your prompt(s) and press "Send".');
+    })();
+  </script>
+</body>
+</html>

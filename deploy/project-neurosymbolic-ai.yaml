@@ -1,0 +1,7 @@
+apiVersion: project.openshift.io/v1
+kind: Project
+metadata:
+  name: neurosymbolic-ai
+spec:
+  displayName: "Neurosymbolic AI"
+  description: "Building Better AI Solutions in Financial Services"

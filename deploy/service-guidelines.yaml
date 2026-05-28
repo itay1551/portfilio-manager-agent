@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: neurosymbolic-ai-guidelines
+  namespace: neurosymbolic-ai
+spec:
+  selector:
+    app: neurosymbolic-ai-guidelines
+  ports:
+    - name: http
+      protocol: TCP
+      port: 7003
+      targetPort: 7003
+  type: ClusterIP

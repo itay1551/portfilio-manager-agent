@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neurosymbolic-ai-guidelines
+  namespace: neurosymbolic-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neurosymbolic-ai-guidelines
+  template:
+    metadata:
+      labels:
+        app: neurosymbolic-ai-guidelines
+    spec:
+      containers:
+        - name: container
+          image: quay.io/aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-guidelines:latest
+          ports:
+            - containerPort: 7003
+              protocol: TCP

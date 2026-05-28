@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neurosymbolic-ai-portfolio
+  namespace: neurosymbolic-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neurosymbolic-ai-portfolio
+  template:
+    metadata:
+      labels:
+        app: neurosymbolic-ai-portfolio
+    spec:
+      containers:
+        - name: container
+          image: quay.io/aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-portfolio:latest
+          ports:
+            - containerPort: 7002
+              protocol: TCP

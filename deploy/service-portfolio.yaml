@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: neurosymbolic-ai-portfolio
+  namespace: neurosymbolic-ai
+spec:
+  selector:
+    app: neurosymbolic-ai-portfolio
+  ports:
+    - name: http
+      protocol: TCP
+      port: 7002
+      targetPort: 7002
+  type: ClusterIP

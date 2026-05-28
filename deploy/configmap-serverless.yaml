@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-endpoints
+  namespace: neurosymbolic-ai
+data:
+  GUIDELINES_URL: "http://neuro-ai-guidelines:7003"
+  PORTFOLIO_URL: "http://agentic-ai-portfolio-neurosymbolic-ai.apps-crc.testing"
+  RISK_URL: "http://agentic-ai-risk-neurosymbolic-ai.apps-crc.testing"
