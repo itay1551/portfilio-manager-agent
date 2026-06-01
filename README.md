@@ -77,7 +77,8 @@ From the project root, configure the UI (optional) and start all services:
 
 ```bash
 cp .env.example .env   # optional — pre-fills LLM settings in the UI
-podman compose up -d --build
+make deploy-local
+# or: podman compose -f deploy/local/compose.yml up -d --build
 ```
 
 | Service | URL |
@@ -170,7 +171,7 @@ podman run -d -p 7003:7003 --name neurosymbolic-ai-guidelines --network neurosym
 First, create the OpenShift project (aka namespace):
 ```
 # Create OpenShift project
-oc apply -f deploy/project-neurosymbolic-ai.yaml
+oc apply -f deploy/helm/project-neurosymbolic-ai.yaml
 ```
 
 ### Grant access to private container images (skip if images are public)
@@ -194,10 +195,10 @@ The Orchestrator needs to call the three agents (guidelines, portfolio generatio
 Run one of the following to create the Configmap:
 ```
 # For always-on, traditional containers
-oc apply -f deploy/configmap-always-on.yaml
+oc apply -f deploy/helm/configmap-always-on.yaml
 
 # For serverless (reduced compute costs)
-oc apply -f deploy/configmap-serverless.yaml
+oc apply -f deploy/helm/configmap-serverless.yaml
 ```
 
 ### UI
@@ -205,10 +206,10 @@ oc apply -f deploy/configmap-serverless.yaml
 To deploy the UI on OpenShift:
 ```
 # Create deployment
-oc apply -f deploy/deployment-ui.yaml
+oc apply -f deploy/helm/deployment-ui.yaml
 
 # Create service and route
-oc apply -f deploy/service-ui.yaml
+oc apply -f deploy/helm/service-ui.yaml
 ```
 
 ### Orchestrator
@@ -216,10 +217,10 @@ oc apply -f deploy/service-ui.yaml
 To deploy the Orchestrator on OpenShift:
 ```
 # Create deployment
-oc apply -f deploy/deployment-orchestrator.yaml
+oc apply -f deploy/helm/deployment-orchestrator.yaml
 
 # Create service and route
-oc apply -f deploy/service-orchestrator.yaml
+oc apply -f deploy/helm/service-orchestrator.yaml
 ```
 
 ### Agents
@@ -227,25 +228,25 @@ oc apply -f deploy/service-orchestrator.yaml
 To deploy as traditional, always-on containers:
 ```
 # Create deployments
-oc apply -f deploy/deployment-guidelines.yaml
-oc apply -f deploy/deployment-portfolio.yaml
-oc apply -f deploy/deployment-risk.yaml
+oc apply -f deploy/helm/deployment-guidelines.yaml
+oc apply -f deploy/helm/deployment-portfolio.yaml
+oc apply -f deploy/helm/deployment-risk.yaml
 
 # Create services
-oc apply -f deploy/service-guidelines.yaml
-oc apply -f deploy/service-portfolio.yaml
-oc apply -f deploy/service-risk.yaml
+oc apply -f deploy/helm/service-guidelines.yaml
+oc apply -f deploy/helm/service-portfolio.yaml
+oc apply -f deploy/helm/service-risk.yaml
 ```
 
 To deploy as serverless (the guideliness agent will be always-on since it needs to build the neural net):
 ```
 # Create deployment / serverless
-oc apply -f deploy/deployment-guidelines.yaml
-oc apply -f deploy/ksvc-portfolio.yaml
-oc apply -f deploy/ksvc-risk.yaml
+oc apply -f deploy/helm/deployment-guidelines.yaml
+oc apply -f deploy/helm/ksvc-portfolio.yaml
+oc apply -f deploy/helm/ksvc-risk.yaml
 
 # Create service
-oc apply -f deploy/service-guidelines.yaml
+oc apply -f deploy/helm/service-guidelines.yaml
 ```
 
 # Run It
