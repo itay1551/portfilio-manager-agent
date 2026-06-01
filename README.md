@@ -25,6 +25,26 @@ This demo will focus will be on a realistic example: an AI-supported portfolio m
 * A container runtime environment.  For development, a good option is [Podman Desktop](https://podman-desktop.io/).  For production workloads, [Red Hat OpenShift](https://www.redhat.com/en/technologies/cloud-computing/openshift) faciliates running AI inference on GPUs and CPUs, AI training, tools and agentic workflows in a hybrid cloud environment.
 * A language model (LM) that is available via an OpenAI-compliant API.  This demo has been tested with a [quantized Llama 3.3 (70B) model](https://huggingface.co/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8).
 
+# Configuration
+
+The React UI can pre-fill connection settings from a `.env` file in the project root (values are baked in at container build time via `VITE_*` build args).
+
+```bash
+cp .env.example .env
+# Edit .env with your LLM endpoint, API key, and model
+```
+
+| Variable | UI field | Description |
+| --- | --- | --- |
+| `OPENAI_API_ENDPOINT` | LLM URL | OpenAI-compatible base URL (e.g. `https://host/v1`) |
+| `OPENAI_API_TOKEN` | API Key | API key for the LLM endpoint |
+| `OPENAI_MODEL` | Model | Model name string |
+| `ORCHESTRATOR_URL` | Orchestrator URL | Optional. Baked as `VITE_ORCHESTRATOR_URL` at UI build. Defaults to `http://localhost:5000/chat` locally, or `http://orchestrator:5000/chat` in Compose |
+
+Alternative variable names are also supported: `LLM_URL`, `OPENAI_API_BASE`, `OPENAI_API_KEY`, `API_KEY`, `LLM_MODEL`, and `MODEL`.
+
+Do not commit `.env` — it is listed in `.gitignore`. Use `.env.example` as the template.
+
 # Build the solution (optional)
 
 The containers needed to run the demo are available online.  However, if you would prefer to build from source:
@@ -51,7 +71,84 @@ To build the application:
 ./build/build_script.sh
 ```
 
-# Deployment: Podman
+# Deployment: Podman Compose
+
+From the project root, configure the UI (optional) and start all services:
+
+```bash
+cp .env.example .env   # optional — pre-fills LLM settings in the UI
+podman compose up -d --build
+```
+
+| Service | URL |
+| --- | --- |
+| UI | http://localhost:8080 |
+| Orchestrator | http://localhost:5000 |
+
+Open the UI at http://localhost:8080, expand **Connection settings** to set the LLM endpoint, API key, and model, then use the two-phase workflow below.
+
+# Two-phase UI (agents-on-a-leash pipeline)
+
+The UI mirrors the deterministic [agents-on-a-leash](https://github.com/aric-rosenbaum/agents-on-a-leash) flow without Fluxnova BPM.
+
+## Tab 1 — Build portfolio
+
+1. Set **Investment guidelines URL**, **Portfolio value**, **Number of symbols**, and **Max VaR**.
+2. Click **Run pipeline**. A progress log shows each step:
+   - Parse guidelines (prohibited tickers)
+   - Build portfolio (retries if VaR exceeds max)
+   - Calculate VaR
+   - Generate draft client email (LLM)
+3. Results appear in the **Results** accordion. On success, **Discuss portfolio** unlocks.
+
+## Tab 2 — Discuss portfolio
+
+- Review live **Portfolio outputs** (prohibited tickers, holdings, VaR, draft email).
+- Chat about the portfolio; the orchestrator can call **portfolio** and **VaR** tools to mutate holdings and risk.
+- Outputs refresh after each response when the context changes.
+- Ask explicitly to **regenerate the draft email** if needed (not automatic on portfolio changes).
+
+# Orchestrator API
+
+| Endpoint | Method | Purpose |
+| --- | --- | --- |
+| `/pipeline` | POST | Run full pipeline in one request |
+| `/pipeline/guidelines` | POST | Parse investment guidelines PDF URL |
+| `/pipeline/portfolio` | POST | Build equities portfolio |
+| `/pipeline/var` | POST | Calculate value at risk |
+| `/pipeline/email` | POST | Generate draft client email |
+| `/chat` | POST | Phase 2 chat with `context` + `history`; legacy agentic chat without `context` |
+
+### `POST /pipeline` body
+
+```json
+{
+  "url_investment_guidelines": "https://…/guidelines.pdf",
+  "portfolio_value": 1000000,
+  "qty_symbols": 5,
+  "max_var": 35000,
+  "config": {
+    "llmUrl": "https://your-llm/v1",
+    "apiKey": "sk-…",
+    "model": "your-model"
+  }
+}
+```
+
+### `POST /chat` with portfolio context (Phase 2)
+
+```json
+{
+  "message": "What is the VaR in plain language?",
+  "history": [{"role": "user", "content": "…"}, {"role": "assistant", "content": "…"}],
+  "context": { "prohibited_tickers": [], "portfolio": [], "valueAtRisk": 0, "draft_email": "…" },
+  "config": { "llmUrl": "…", "apiKey": "…", "model": "…" }
+}
+```
+
+Response includes `content` and updated `context`.
+
+# Deployment: Podman (individual containers)
 
 To faciliate communication between the Orchestrator and the agents, first create a Podman network:
 ```
@@ -153,11 +250,9 @@ oc apply -f deploy/service-guidelines.yaml
 
 # Run It
 
-<b>UI:</b> Launch the UI
-In a browser, enter the URL of the UI.  For Podman Desktop, this .  For OpenShift, this might be "http://ui-neurosymbolic-ai.apps-crc.testing/"
+<b>UI:</b> Launch the UI at http://localhost:8080 when using Podman Compose, or the route URL when deployed on OpenShift (for example `http://ui-neurosymbolic-ai.apps-crc.testing/`).
 
-<b>Config the UI:</b> Enter the LLM endpoint, API key and requested model.
-The application requires you to specify the URL of the language model, API key and model type.
+<b>Config the UI:</b> If you created a `.env` file from `.env.example`, the orchestrator URL, LLM endpoint, API key, and model are loaded automatically. Expand **Connection settings** to review or override them. Otherwise, enter the LLM endpoint, API key, and model manually.
 
 <b>Example 1:</b> Enter a simple prompt that doesn't require any tools: 
 ```
