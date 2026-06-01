@@ -1,12 +1,33 @@
-# Use Red Hat Universal Base Image 10 as the base image
-FROM registry.access.redhat.com/ubi10/nginx-126
+# Stage 1: build (Red Hat UBI — avoids Docker Hub auth in restricted environments)
+FROM registry.access.redhat.com/ubi9/nodejs-20 AS build
 
-# The Red Hat nginx image serves application content from /opt/app-root/src.
-# Place index.html in the same directory as this Dockerfile.
-COPY index.html /opt/app-root/src/index.html
+USER 0
+WORKDIR /app
 
-# The base image serves HTTP on a non-privileged port.
+ARG VITE_ORCHESTRATOR_URL=/api/chat
+ARG VITE_OPENAI_API_ENDPOINT=
+ARG VITE_OPENAI_API_TOKEN=
+ARG VITE_OPENAI_MODEL=
+
+ENV VITE_ORCHESTRATOR_URL=$VITE_ORCHESTRATOR_URL
+ENV VITE_OPENAI_API_ENDPOINT=$VITE_OPENAI_API_ENDPOINT
+ENV VITE_OPENAI_API_TOKEN=$VITE_OPENAI_API_TOKEN
+ENV VITE_OPENAI_MODEL=$VITE_OPENAI_MODEL
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY . .
+RUN npm run build
+
+# Stage 2: serve
+FROM registry.access.redhat.com/ubi9/nginx-120
+
+USER 0
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+RUN chgrp -R 0 /usr/share/nginx/html && chmod -R g+rwX /usr/share/nginx/html
+
 EXPOSE 8080
 
-# Run nginx in the foreground.
 CMD ["nginx", "-g", "daemon off;"]
