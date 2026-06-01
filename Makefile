@@ -4,4 +4,4 @@ deploy-local:
 	podman compose -f deploy/local/compose.yml up -d --build
 
 deploy-cluster:
-	oc apply -f deploy/helm/
+	helm upgrade --install neurosymbolic-ai deploy/helm -n neurosymbolic-ai --create-namespace
