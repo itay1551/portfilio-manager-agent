@@ -1,9 +1,11 @@
+{{- if not .Values.serverless.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: agent-endpoints
-  namespace: neurosymbolic-ai
+  namespace: {{ .Values.namespace }}
 data:
   GUIDELINES_URL: "http://agentic-ai-guidelines:7003"
   PORTFOLIO_URL: "http://agentic-ai-portfolio:7002"
   RISK_URL: "http://agentic-ai-risk:7001"
+{{- end }}

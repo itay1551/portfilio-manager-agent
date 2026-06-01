@@ -1,0 +1,14 @@
+namespace: neurosymbolic-ai
+
+image:
+  registry: quay.io/aric-rosenbaum/neurosymbolic-ai
+  tag: latest
+
+replicas: 1
+
+serverless:
+  enabled: false
+  minScale: "0"
+  maxScale: "5"
+  concurrency: 10
+  timeoutSeconds: 60

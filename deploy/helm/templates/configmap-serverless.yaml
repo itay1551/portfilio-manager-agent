@@ -1,0 +1,11 @@
+{{- if .Values.serverless.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-endpoints
+  namespace: {{ .Values.namespace }}
+data:
+  GUIDELINES_URL: "http://neuro-ai-guidelines:7003"
+  PORTFOLIO_URL: "http://agentic-ai-portfolio-{{ .Values.namespace }}.apps-crc.testing"
+  RISK_URL: "http://agentic-ai-risk-{{ .Values.namespace }}.apps-crc.testing"
+{{- end }}
