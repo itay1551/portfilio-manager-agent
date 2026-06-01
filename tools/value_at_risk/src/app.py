@@ -89,34 +89,41 @@ def list_tools():
 # Value at risk endpoint
 @app.post("/tools/value_at_risk")
 def value_at_risk():
+    try:
+        request_data = request.get_json(silent=True) or {}
+        confidence = request_data.get("confidence", 0.99)
+        if isinstance(confidence, str):
+            confidence = int(confidence)
+        if 1 < confidence < 100:
+            confidence = round(confidence / 100, 2)
+        positions = request_data.get("portfolio")
+        if not positions:
+            return jsonify({"error": "portfolio is required"}), 400
 
-    # Parms
-    request_data = request.json
-    confidence = request_data.get("confidence", 0.99)
-    if isinstance(confidence, str):
-        confidence = int(confidence)
-    if 1 < confidence < 100:
-        confidence = round(confidence / 100, 2)
-    positions = request_data.get("portfolio")
-    portfolio = Portfolio()
-    if isinstance(positions, str):
-        positions = ast.literal_eval(positions)
-    for position in positions:
-        portfolio.addPosition(position["symbol"], int(position["quantity"]))
+        portfolio = Portfolio()
+        if isinstance(positions, str):
+            positions = ast.literal_eval(positions)
+        for position in positions:
+            portfolio.addPosition(position["symbol"], int(position["quantity"]))
 
-    # Fetch closing price for each symbol for the last year
-    start = datetime.date.today() - datetime.timedelta(days = 365)
-    end = datetime.date.today()
-    market_data = MarketData()
-    hist_prices = market_data.get(portfolio.symbols(), start, end)
+        start = datetime.date.today() - datetime.timedelta(days=365)
+        end = datetime.date.today()
+        market_data = MarketData()
+        hist_prices = market_data.get(portfolio.symbols(), start, end)
 
-    # Calculate value at risk
-    var = ValueAtRisk()
-    results = var.calculate(portfolio, hist_prices, confidence)
+        var = ValueAtRisk()
+        results = var.calculate(portfolio, hist_prices, confidence)
 
-    # Return VaR
-    data = {"confidence": confidence, "valueAtRisk": results, "valueAtRiskAsOf": int(datetime.datetime.utcnow().timestamp() * 1000)}
-    return jsonify(data)
+        data = {
+            "confidence": confidence,
+            "valueAtRisk": results,
+            "valueAtRiskAsOf": int(
+                datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000
+            ),
+        }
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": f"Tool: 'value_at_risk' failed: {e}"}), 500
 
 
 @app.post("/tools/echo")
