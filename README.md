@@ -164,15 +164,33 @@ podman run -d -p 7002:7002 --name neurosymbolic-ai-portfolio --network neurosymb
 podman run -d -p 7003:7003 --name neurosymbolic-ai-guidelines --network neurosymbolic-ai quay.io/aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-guidelines:latest
 ```
 
-# Deployment: OpenShift
+# Deployment: OpenShift (Helm)
 
-### OpenShift project
+The `deploy/helm/` directory is a Helm chart. Install with defaults (always-on agents):
 
-First, create the OpenShift project (aka namespace):
+```bash
+make deploy-cluster
+# or: helm upgrade --install neurosymbolic-ai deploy/helm -n neurosymbolic-ai --create-namespace
 ```
-# Create OpenShift project
-oc apply -f deploy/helm/project-neurosymbolic-ai.yaml
+
+To deploy with serverless (Knative) agents instead:
+
+```bash
+helm upgrade --install neurosymbolic-ai deploy/helm \
+  -n neurosymbolic-ai --create-namespace \
+  --set serverless.enabled=true
 ```
+
+Override the image registry or tag:
+
+```bash
+helm upgrade --install neurosymbolic-ai deploy/helm \
+  -n neurosymbolic-ai --create-namespace \
+  --set image.registry=ghcr.io/your-org \
+  --set image.tag=v1.2.3
+```
+
+See `deploy/helm/values.yaml` for all configurable values.
 
 ### Grant access to private container images (skip if images are public)
 If the container images are private, you need to create a secret and grant access to the project.  Here's an example of how to do this with GHCR:
@@ -187,66 +205,6 @@ oc create secret docker-registry ghcr-creds \
 
 # Grant secret to project
 oc secrets link default ghcr-creds --for=pull -n neurosymbolic-ai
-```
-
-### Create configmap so the Orchestrator knows where to find the agents
-The Orchestrator needs to call the three agents (guidelines, portfolio generation and risk calculator).  Traditionally, these agents would run as always-on, traditional containers.  Alternatively, the portfolio and risk agents can be run as serverless to reduce compute costs. In this case, the pod count will spin down to zero and OpenShift will launch the pod when a request is made to the agent.
-
-Run one of the following to create the Configmap:
-```
-# For always-on, traditional containers
-oc apply -f deploy/helm/configmap-always-on.yaml
-
-# For serverless (reduced compute costs)
-oc apply -f deploy/helm/configmap-serverless.yaml
-```
-
-### UI
-
-To deploy the UI on OpenShift:
-```
-# Create deployment
-oc apply -f deploy/helm/deployment-ui.yaml
-
-# Create service and route
-oc apply -f deploy/helm/service-ui.yaml
-```
-
-### Orchestrator
-
-To deploy the Orchestrator on OpenShift:
-```
-# Create deployment
-oc apply -f deploy/helm/deployment-orchestrator.yaml
-
-# Create service and route
-oc apply -f deploy/helm/service-orchestrator.yaml
-```
-
-### Agents
-
-To deploy as traditional, always-on containers:
-```
-# Create deployments
-oc apply -f deploy/helm/deployment-guidelines.yaml
-oc apply -f deploy/helm/deployment-portfolio.yaml
-oc apply -f deploy/helm/deployment-risk.yaml
-
-# Create services
-oc apply -f deploy/helm/service-guidelines.yaml
-oc apply -f deploy/helm/service-portfolio.yaml
-oc apply -f deploy/helm/service-risk.yaml
-```
-
-To deploy as serverless (the guideliness agent will be always-on since it needs to build the neural net):
-```
-# Create deployment / serverless
-oc apply -f deploy/helm/deployment-guidelines.yaml
-oc apply -f deploy/helm/ksvc-portfolio.yaml
-oc apply -f deploy/helm/ksvc-risk.yaml
-
-# Create service
-oc apply -f deploy/helm/service-guidelines.yaml
 ```
 
 # Run It

@@ -47,7 +47,7 @@ This is a **AI portfolio management system** — a demo combining an LLM orchest
 ├── models/                    # Pre-trained MLP model (joblib)
 ├── deploy/
 │   ├── local/                 # Local dev (compose.yml, podman scripts)
-│   └── helm/                  # OpenShift/Knative YAML manifests
+│   └── helm/                  # Helm chart (Chart.yaml, values.yaml, templates/)
 ├── build-script/              # Container image build script
 ├── images/                    # README screenshots
 ├── Makefile                   # deploy-local / deploy-cluster targets
