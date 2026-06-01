@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: orchestrator
-  namespace: neurosymbolic-ai
+  namespace: {{ .Values.namespace }}
 spec:
   selector:
     app: orchestrator
@@ -17,7 +17,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: orchestrator
-  namespace: neurosymbolic-ai
+  namespace: {{ .Values.namespace }}
 spec:
   to:
     kind: Service

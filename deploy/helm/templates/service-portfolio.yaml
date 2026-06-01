@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: neurosymbolic-ai-portfolio
-  namespace: neurosymbolic-ai
+  namespace: {{ .Values.namespace }}
 spec:
   selector:
     app: neurosymbolic-ai-portfolio

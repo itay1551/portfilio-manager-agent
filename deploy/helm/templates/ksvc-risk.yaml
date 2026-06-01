@@ -1,0 +1,22 @@
+{{- if .Values.serverless.enabled }}
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: agentic-ai-risk
+  namespace: {{ .Values.namespace }}
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: {{ .Values.serverless.minScale | quote }}
+        autoscaling.knative.dev/max-scale: {{ .Values.serverless.maxScale | quote }}
+    spec:
+      containerConcurrency: {{ .Values.serverless.concurrency }}
+      timeoutSeconds: {{ .Values.serverless.timeoutSeconds }}
+      containers:
+        - name: container
+          image: {{ .Values.image.registry }}/agentic-ai-risk:{{ .Values.image.tag }}
+          ports:
+            - containerPort: 7001
+              protocol: TCP
+{{- end }}
