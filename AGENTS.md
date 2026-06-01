@@ -45,10 +45,12 @@ This is a **AI portfolio management system** — a demo combining an LLM orchest
 │   ├── portfolio/src/         # Random S&P 100 equal-weight portfolio builder
 │   └── value_at_risk/src/     # Parametric 1-day VaR (app.py + portfolio.py, market_data.py, value_at_risk.py)
 ├── models/                    # Pre-trained MLP model (joblib)
-├── deploy/                    # OpenShift/Knative/Podman manifests
+├── deploy/
+│   ├── local/                 # Local dev (compose.yml, podman scripts)
+│   └── helm/                  # OpenShift/Knative YAML manifests
 ├── build-script/              # Container image build script
 ├── images/                    # README screenshots
-├── compose.yml                # Local dev stack (podman compose)
+├── Makefile                   # deploy-local / deploy-cluster targets
 ├── .env.example               # Environment variable template
 └── AGENTS.md                  # This file
 ```
@@ -101,8 +103,8 @@ Tool names must be globally unique across all servers. The agentic `Orchestrator
 cp .env.example .env
 
 # Start all services
-podman compose up -d --build
-# or: docker compose up -d --build
+make deploy-local
+# or: podman compose -f deploy/local/compose.yml up -d --build
 
 # UI: http://localhost:8080
 # Orchestrator API: http://localhost:5000
@@ -154,7 +156,7 @@ All endpoints requiring LLM access expect a `config` object:
 
 1. Create `tools/<name>/src/app.py` implementing `GET /tools` and `POST /tools/<tool_name>`
 2. Add a `Dockerfile` and `requirements.txt` in the same directory
-3. Add the service to `compose.yml` with a unique port
+3. Add the service to `deploy/local/compose.yml` with a unique port
 4. Add the URL to the orchestrator's `TOOL_SERVERS` environment variable
 5. If the tool should be available in Phase 2 chat, add its name to `PHASE2_TOOLS` in `orchestrator/src/app.py`
 
@@ -189,7 +191,7 @@ Images are tagged for `quay.io/aric-rosenbaum/neurosymbolic-ai/*`.
 ## Known Issues / Inconsistencies
 
 - Project folder name has a typo: `ai-portfilio-manager` (should be "portfolio")
-- README references `build/` but actual path is `build-script/`; also references `build/deploy_podman.sh` but the script lives at `deploy/deploy_podman.sh`
-- `deploy/deploy_podman_multi.sh` creates network `agentic-ai` but references `ai-network`
+- README references `build/` but actual path is `build-script/`; also references `build/deploy_podman.sh` but the script lives at `deploy/local/deploy_podman.sh`
+- `deploy/local/deploy_podman_multi.sh` creates network `agentic-ai` but references `ai-network`
 - Tool agent `requirements.txt` files contain many unused transitive dependencies (full pip freeze)
 - No automated tests for Python services; UI has Vitest unit tests
