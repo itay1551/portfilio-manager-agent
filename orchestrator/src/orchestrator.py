@@ -1,12 +1,9 @@
-import os
 import json
-import time
 import typing as t
 from dataclasses import dataclass
 from urllib.parse import urljoin
 
 import requests
-from flask import Flask, request, jsonify
 from openai import OpenAI
 
 # ----------------------------
@@ -19,12 +16,6 @@ class DiscoveredTool:
     description: str
     parameters: dict   # JSON Schema
     server_base: str   # which HTTP server hosts it
-
-def _get_env(name: str, default: str | None = None) -> str:
-    v = os.getenv(name, default)
-    if v is None:
-        raise RuntimeError(f"Missing required environment variable: {name}")
-    return v
 
 # ----------------------------
 # HTTP Tool Server Adapter (same simple shape)
@@ -78,7 +69,6 @@ class Orchestrator:
         for server in self.servers:
             for tool in server.discover():
                 if tool.name in self.tool_registry:
-                    # namespace duplicates by host if needed
                     raise ValueError(f"Duplicate tool name discovered: {tool.name}")
                 self.tool_registry[tool.name] = tool
                 advertised.append({
@@ -101,15 +91,6 @@ class Orchestrator:
             }
             for t_ in self.tool_registry.values()
         ]
-        #return [
-        #    {
-        #        "type": "function",
-        #        "name": t_.name,
-        #        "description": t_.description,
-        #        "parameters": t_.parameters,
-        #    }
-        #    for t_ in self.tool_registry.values()
-        #]
 
     def _execute_tool_call(self, name: str, arguments_json: str | dict) -> dict:
         tool = self.tool_registry.get(name)
@@ -129,75 +110,139 @@ class Orchestrator:
             return {"error": f"HTTP error from {name}: {e.response.status_code} {e.response.text}"}
         except Exception as e:
             return {"error": f"Tool {name} failed: {e}"}
-        
 
-    def chat_agentic(self, system_prompt: str, user_prompt: str, temperature: float = 0.2) -> dict:
-        if not self.tool_registry:
-            self.refresh_tools()
-
-        # Build system and user prompts
-        prompts: list[dict] = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-
-        # Track token, llm and took usage
+    def _run_agentic_loop(
+        self,
+        prompts: list[dict],
+        tools: list[dict] | None,
+        temperature: float,
+        on_tool_result: t.Callable[[str, dict, dict], None] | None = None,
+    ) -> dict:
         tokens_in = 0
         tokens_out = 0
         llm_count = 0
         tool_history: list[dict] = []
-
-        # Load array of available tools
-        tools = self.tools_payload()
-
-        # Continue loop while we need to call the LLM:
-        #   - Call LLM at least once
-        #   - If LLM requests a tool call, we need to call LLM again:
-        #       - To craft a final response
-        #       - Or, determine if we need to call addt'l tools
         need_to_call_llm = True
-        while need_to_call_llm and llm_count < 20:
+        response = None
 
-            response = self.openai.chat.completions.create(
-                model = self.model,
-                messages = prompts,
-                tools = tools,
-                temperature = temperature
-            )
+        while need_to_call_llm and llm_count < 20:
+            kwargs: dict = {
+                "model": self.model,
+                "messages": prompts,
+                "temperature": temperature,
+            }
+            if tools:
+                kwargs["tools"] = tools
+
+            response = self.openai.chat.completions.create(**kwargs)
             need_to_call_llm = False
             tokens_in += response.usage.prompt_tokens
             tokens_out += response.usage.completion_tokens
             llm_count += 1
 
-            # Any functions / tools to call?
-            tool_events: list[dict] = []
-            tool_calls = response.choices[0].message.tool_calls
-            if tool_calls is None:
-                tool_calls = []
+            tool_calls = response.choices[0].message.tool_calls or []
             for item in tool_calls:
-                if item.type == "function":
-                    need_to_call_llm = True
-                    function_call_name = item.function.name
-                    function_call_arguments = json.loads(item.function.arguments)
-                    result = self._execute_tool_call(function_call_name, function_call_arguments)
-                    print(f"Function: {function_call_name}, Args: {function_call_arguments}, Result: {result}")
-                    prompts.append({
-                        "role": "assistant",
-                        "content": response.choices[0].message.content,
-                        "tool_calls": [item]
-                    })
-                    prompts.append({
-                        "role": "tool",
-                        "tool_call_id": item.id,
-                        "name": function_call_name,
-                        "content": json.dumps(result)
-                    })
-                    tool_history.append({"name": function_call_name, "args": function_call_arguments, "result": result})
+                if item.type != "function":
+                    continue
+                need_to_call_llm = True
+                function_call_name = item.function.name
+                function_call_arguments = json.loads(item.function.arguments)
+                result = self._execute_tool_call(
+                    function_call_name, function_call_arguments
+                )
+                print(
+                    f"Function: {function_call_name}, "
+                    f"Args: {function_call_arguments}, Result: {result}"
+                )
+                if on_tool_result and not (
+                    isinstance(result, dict) and result.get("error")
+                ):
+                    on_tool_result(
+                        function_call_name, result, function_call_arguments
+                    )
+
+                prompts.append({
+                    "role": "assistant",
+                    "content": response.choices[0].message.content,
+                    "tool_calls": [item],
+                })
+                prompts.append({
+                    "role": "tool",
+                    "tool_call_id": item.id,
+                    "name": function_call_name,
+                    "content": json.dumps(result),
+                })
+                tool_history.append({
+                    "name": function_call_name,
+                    "args": function_call_arguments,
+                    "result": result,
+                })
 
         return {
-            "content": response.choices[0].message.content,
+            "content": response.choices[0].message.content if response else "",
             "tool_history": tool_history,
             "usage_tokens_in": tokens_in,
             "usage_tokens_out": tokens_out,
-            "llm_count": llm_count
+            "llm_count": llm_count,
         }
+
+    def chat_agentic(self, system_prompt: str, user_prompt: str, temperature: float = 0.2) -> dict:
+        if not self.tool_registry:
+            self.refresh_tools()
+
+        prompts: list[dict] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        return self._run_agentic_loop(
+            prompts, self.tools_payload(), temperature
+        )
+
+    def refresh_tools_filtered(self, allowed_names: set[str]) -> None:
+        """Discover tools and keep only those in allowed_names."""
+        self.tool_registry.clear()
+        for server in self.servers:
+            for tool in server.discover():
+                if tool.name not in allowed_names:
+                    continue
+                if tool.name in self.tool_registry:
+                    raise ValueError(f"Duplicate tool name discovered: {tool.name}")
+                self.tool_registry[tool.name] = tool
+
+    def chat_with_context(
+        self,
+        system_prompt: str,
+        messages: list[dict],
+        context: dict,
+        allowed_tools: set[str] | None = None,
+        temperature: float = 0.2,
+        on_tool_result: t.Callable[[str, dict, dict], None] | None = None,
+    ) -> dict:
+        """
+        Agentic chat with portfolio context injected and optional tool subset.
+        messages: prior chat turns (user/assistant) plus the current user turn.
+        on_tool_result: optional callback(tool_name, result, args) after each tool call.
+        """
+        if allowed_tools is not None:
+            self.refresh_tools_filtered(allowed_tools)
+        elif not self.tool_registry:
+            self.refresh_tools()
+
+        context_block = json.dumps(context, indent=2)
+        full_system = (
+            f"{system_prompt}\n\n"
+            f"Current portfolio context (authoritative; update via tools when the user "
+            f"requests portfolio or risk changes):\n{context_block}"
+        )
+
+        prompts: list[dict] = [{"role": "system", "content": full_system}]
+        for msg in messages:
+            role = msg.get("role")
+            content = msg.get("content")
+            if role in ("user", "assistant") and content:
+                prompts.append({"role": role, "content": content})
+
+        tools = self.tools_payload() if self.tool_registry else None
+        return self._run_agentic_loop(
+            prompts, tools, temperature, on_tool_result
+        )

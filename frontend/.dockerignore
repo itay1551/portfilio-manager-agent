@@ -1,0 +1,6 @@
+node_modules
+dist
+.git
+*.md
+src/__tests__
+coverage

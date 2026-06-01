@@ -1,0 +1,69 @@
+services:
+  ui:
+    build:
+      context: ./frontend
+      args:
+        VITE_ORCHESTRATOR_URL: /api/chat
+        VITE_OPENAI_API_ENDPOINT: ${OPENAI_API_ENDPOINT:-}
+        VITE_OPENAI_API_TOKEN: ${OPENAI_API_TOKEN:-}
+        VITE_OPENAI_MODEL: ${OPENAI_MODEL:-}
+    ports:
+      - "8080:8080"
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      orchestrator:
+        condition: service_started
+    restart: unless-stopped
+
+  orchestrator:
+    build:
+      context: ./orchestrator/src
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: "5000"
+      TOOL_SERVERS: >-
+        http://risk:7001,
+        http://portfolio:7002,
+        http://guidelines:7003
+    depends_on:
+      risk:
+        condition: service_started
+      portfolio:
+        condition: service_started
+      guidelines:
+        condition: service_started
+    restart: unless-stopped
+
+  risk:
+    build:
+      context: ./tools/value_at_risk/src
+    ports:
+      - "7001:7001"
+    environment:
+      PORT: "7001"
+    restart: unless-stopped
+
+  portfolio:
+    build:
+      context: ./tools/portfolio/src
+    ports:
+      - "7002:7002"
+    environment:
+      PORT: "7002"
+    restart: unless-stopped
+
+  guidelines:
+    build:
+      context: ./tools/guidelines/src
+    ports:
+      - "7003:7003"
+    environment:
+      PORT: "7003"
+      MODEL_PATH: "models/investment-guidelines-mlp.joblib"
+    volumes:
+      - ./models:/app/models:ro,z
+      - ./tools/guidelines/docs:/app/docs:ro,z
+    restart: unless-stopped

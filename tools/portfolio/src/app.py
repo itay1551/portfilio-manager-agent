@@ -60,7 +60,46 @@ TOOLS = [
                 }
             }
         }
-    }
+    },
+    {
+        "type": "function",
+        "name": "portfolio_replace_symbol",
+        "description": (
+            "Replace one holding in an existing portfolio with a new random eligible "
+            "symbol; all other positions are kept unchanged"
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "portfolio": {
+                    "type": "array",
+                    "description": "Current portfolio holdings",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "symbol": {"type": "string"},
+                            "quantity": {"type": "integer"},
+                        },
+                    },
+                },
+                "remove_symbol": {
+                    "type": "string",
+                    "description": "Ticker symbol to remove from the portfolio",
+                },
+                "portfolio_value": {
+                    "type": "number",
+                    "description": "Total portfolio value in USD (for equal-weight sizing)",
+                    "minimum": 0,
+                },
+                "symbols_exclusion": {
+                    "type": "array",
+                    "description": "Symbols that must not be selected as the replacement",
+                    "items": {"type": "string"},
+                },
+            },
+            "required": ["portfolio", "remove_symbol"],
+        },
+    },
 ]
 
 # Define universe of S&P 100 stocks.
@@ -92,6 +131,14 @@ def last_price(symbol):
     return round(price, 3)
 
 
+def pick_replacement_symbol(held_symbols, symbols_exclusion):
+    blocked = set(symbols_exclusion) | set(held_symbols)
+    candidates = [s for s in SP_100 if s not in blocked]
+    if not candidates:
+        raise ValueError("No eligible replacement symbols after applying exclusions")
+    return random.choice(candidates)
+
+
 # ---- Routes ----
 @app.get("/tools")
 def list_tools():
@@ -120,10 +167,47 @@ def portfolio_equities():
                 portfolio.append({"symbol": symbol, "quantity": shares, "last_price": price})       
     except Exception as e:
         print(e)
-        return {"error": f"Tool: 'portfolio_equities' failed: {e}"}
+        return jsonify({"error": f"Tool: 'portfolio_equities' failed: {e}"}), 500
 
     # Return portfolio
     return portfolio
+
+
+@app.post("/tools/portfolio_replace_symbol")
+def portfolio_replace_symbol():
+    data, err = json_args()
+    if err:
+        return err
+    try:
+        portfolio = list(data.get("portfolio") or [])
+        remove_symbol = str(data.get("remove_symbol", "")).upper()
+        if not portfolio or not remove_symbol:
+            return {"error": "portfolio and remove_symbol are required"}
+
+        held = [p["symbol"] for p in portfolio if p.get("symbol")]
+        if remove_symbol not in held:
+            return {"error": f"{remove_symbol} is not in the current portfolio"}
+
+        portfolio_value = int(data.get("portfolio_value", 1_000_000))
+        symbols_exclusion = list(data.get("symbols_exclusion") or [])
+
+        kept = [p for p in portfolio if p.get("symbol") != remove_symbol]
+        replacement = pick_replacement_symbol(
+            held_symbols=held,
+            symbols_exclusion=symbols_exclusion + [remove_symbol],
+        )
+        price = last_price(replacement)
+        slot_value = portfolio_value / len(portfolio)
+        shares = int(slot_value / price)
+        kept.append({
+            "symbol": replacement,
+            "quantity": shares,
+            "last_price": price,
+        })
+        return kept
+    except Exception as e:
+        print(e)
+        return jsonify({"error": f"Tool: 'portfolio_replace_symbol' failed: {e}"}), 500
 
 
 @app.post("/tools/echo")
