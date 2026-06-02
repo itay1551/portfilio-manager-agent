@@ -35,3 +35,12 @@ jobs:
       - name: Run tests
         working-directory: frontend
         run: npm test
+
+      - name: Production build
+        working-directory: frontend
+        env:
+          VITE_OPENAI_API_ENDPOINT: https://example.com/v1
+          VITE_OPENAI_API_TOKEN: ci
+          VITE_OPENAI_MODEL: ci-model
+          VITE_ORCHESTRATOR_URL: /api/chat
+        run: npm run build
