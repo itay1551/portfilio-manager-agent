@@ -1,5 +1,4 @@
 namespace: investment-advisor-agent
-
 image:
   repository: quay.io/ikatav/portfolio-manager-agent
   tags:
@@ -8,9 +7,7 @@ image:
     risk: risk
     portfolio: portfolio
     guidelines: guidelines
-
 replicas: 1
-
 serverless:
   enabled: false
   minScale: "0"

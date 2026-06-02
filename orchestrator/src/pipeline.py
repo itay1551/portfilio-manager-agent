@@ -24,9 +24,7 @@ DRAFT_EMAIL_SYSTEM = (
     "guidelines. Do not hallucinate. Only present what you know as fact."
 )
 
-PORTFOLIO_MUTATION_TOOLS = frozenset(
-    {"portfolio_equities", "portfolio_replace_symbol"}
-)
+PORTFOLIO_MUTATION_TOOLS = frozenset({"portfolio_equities", "portfolio_replace_symbol"})
 
 
 class ToolRegistry:
@@ -37,9 +35,7 @@ class ToolRegistry:
         for server in servers:
             for tool in server.discover():
                 if tool.name in self._map:
-                    raise RuntimeError(
-                        f"Duplicate tool name discovered: {tool.name}"
-                    )
+                    raise RuntimeError(f"Duplicate tool name discovered: {tool.name}")
                 self._map[tool.name] = server
 
     def call(self, name: str, arguments: dict) -> Any:
@@ -248,7 +244,9 @@ def apply_phase2_tool_result(
 ) -> dict[str, Any]:
     """Apply tool output to context; recalc VaR after portfolio mutations."""
     if tool_name == "value_at_risk" and tool_args is not None:
-        if not _same_portfolio_holdings(tool_args.get("portfolio"), context.get("portfolio")):
+        if not _same_portfolio_holdings(
+            tool_args.get("portfolio"), context.get("portfolio")
+        ):
             return context
 
     ctx = apply_tool_result_to_context(context, tool_name, result)
@@ -271,9 +269,7 @@ _DISLIKE_SYMBOL_RE = re.compile(
 )
 
 
-def disliked_symbol_in_message(
-    user_message: str, portfolio: list[dict]
-) -> str | None:
+def disliked_symbol_in_message(user_message: str, portfolio: list[dict]) -> str | None:
     """Match verify-script phrasing: reject one named holding."""
     match = _DISLIKE_SYMBOL_RE.search(user_message)
     if not match:

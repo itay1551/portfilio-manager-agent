@@ -1,5 +1,4 @@
 name: Python Unit Tests
-
 on:
   pull_request:
     branches: [main]
@@ -15,22 +14,18 @@ on:
       - 'tools/**'
       - 'tests/**'
   workflow_dispatch:
-
 jobs:
   unit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
       - name: Install test dependencies
         run: |
           pip install -r tests/requirements.txt
           pip install -r orchestrator/src/requirements.txt
           pip install -r tools/guidelines/src/requirements.txt
-
       - name: Run unit tests
         run: pytest tests/unit -m unit -v

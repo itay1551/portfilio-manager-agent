@@ -1,5 +1,4 @@
 name: Build and Push Images
-
 on:
   push:
     branches: [main]
@@ -14,7 +13,6 @@ on:
       - 'orchestrator/**'
       - 'tools/**'
   workflow_dispatch:
-
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -26,7 +24,6 @@ jobs:
       guidelines: ${{ steps.filter.outputs.guidelines }}
     steps:
       - uses: actions/checkout@v4
-
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -41,7 +38,6 @@ jobs:
               - 'tools/portfolio/**'
             guidelines:
               - 'tools/guidelines/**'
-
   build-matrix:
     runs-on: ubuntu-latest
     needs: detect-changes
@@ -89,7 +85,6 @@ jobs:
 
           echo "matrix={\"service\":$services}" >> "$GITHUB_OUTPUT"
           echo "has_services=$has_services" >> "$GITHUB_OUTPUT"
-
   build:
     needs: build-matrix
     if: needs.build-matrix.outputs.has_services == 'true'

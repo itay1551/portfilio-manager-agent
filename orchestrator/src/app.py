@@ -95,12 +95,14 @@ def health():
 # Info endpoint
 @app.route("/info", methods=["GET"])
 def info():
-    return jsonify({
-        "app_name": "Investment Advisor Agent",
-        "author": "Aric Rosenbaum",
-        "version": "1.0.0",
-        "max_portfolio_attempts": MAX_PORTFOLIO_ATTEMPTS,
-    }), 200
+    return jsonify(
+        {
+            "app_name": "Investment Advisor Agent",
+            "author": "Aric Rosenbaum",
+            "version": "1.0.0",
+            "max_portfolio_attempts": MAX_PORTFOLIO_ATTEMPTS,
+        }
+    ), 200
 
 
 @app.route("/pipeline/guidelines", methods=["POST"])
@@ -223,7 +225,8 @@ def chat():
         if context is not None:
             ctx = dict(context)
             messages = [
-                m for m in history
+                m
+                for m in history
                 if m.get("role") in ("user", "assistant") and m.get("content")
             ]
 
@@ -232,11 +235,13 @@ def chat():
             if disliked:
                 before = list(ctx.get("portfolio", []))
                 ctx = apply_symbol_rejection(ctx, disliked, registry)
-                server_tool_history.append({
-                    "name": "portfolio_replace_symbol",
-                    "args": {"remove_symbol": disliked, "portfolio": before},
-                    "result": ctx.get("portfolio", []),
-                })
+                server_tool_history.append(
+                    {
+                        "name": "portfolio_replace_symbol",
+                        "args": {"remove_symbol": disliked, "portfolio": before},
+                        "result": ctx.get("portfolio", []),
+                    }
+                )
 
             def on_tool(tool_name: str, result, args: dict) -> None:
                 nonlocal ctx
@@ -266,30 +271,34 @@ def chat():
 
             dt = time.time() - t0
             tool_history = server_tool_history + result["tool_history"]
-            return jsonify({
-                "content": result["content"],
-                "context": ctx,
-                "model": llm_model,
-                "tool_history": tool_history,
-                "latency_sec": round(dt, 3),
-                "usage_tokens_in": result["usage_tokens_in"],
-                "usage_tokens_out": result["usage_tokens_out"],
-                "llm_count": result["llm_count"],
-            }), 200
+            return jsonify(
+                {
+                    "content": result["content"],
+                    "context": ctx,
+                    "model": llm_model,
+                    "tool_history": tool_history,
+                    "latency_sec": round(dt, 3),
+                    "usage_tokens_in": result["usage_tokens_in"],
+                    "usage_tokens_out": result["usage_tokens_out"],
+                    "llm_count": result["llm_count"],
+                }
+            ), 200
 
         # Legacy free-form agentic chat (all tools)
         orchestrator.refresh_tools()
         result = orchestrator.chat_agentic(system, user, temperature=temperature)
         dt = time.time() - t0
-        return jsonify({
-            "content": result["content"],
-            "model": llm_model,
-            "tool_history": result["tool_history"],
-            "latency_sec": round(dt, 3),
-            "usage_tokens_in": result["usage_tokens_in"],
-            "usage_tokens_out": result["usage_tokens_out"],
-            "llm_count": result["llm_count"],
-        }), 200
+        return jsonify(
+            {
+                "content": result["content"],
+                "model": llm_model,
+                "tool_history": result["tool_history"],
+                "latency_sec": round(dt, 3),
+                "usage_tokens_in": result["usage_tokens_in"],
+                "usage_tokens_out": result["usage_tokens_out"],
+                "llm_count": result["llm_count"],
+            }
+        ), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
