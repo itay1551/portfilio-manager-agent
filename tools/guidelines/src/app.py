@@ -5,7 +5,6 @@
 
 from flask import Flask, request, jsonify
 import os
-import random
 
 import re
 from io import BytesIO
@@ -19,9 +18,10 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 import joblib
+
 app = Flask(__name__)
 
-'''
+"""
 Design a portfolio based on specified criteria:
   - Portfolio size
   - Excluded ticker symbols
@@ -36,7 +36,7 @@ curl -X POST \
     -d '{"url_investment_guidelines": "https://d15bgksgja6rr0.cloudfront.net/Neurosymbolic-Inc-Investment-Guidelines.pdf"}' \
     http://localhost:7003/tools/prohibited_symbols
 
-'''
+"""
 
 
 # ---- Advertised tools (JSON Schema params) ----
@@ -50,14 +50,14 @@ TOOLS = [
             "properties": {
                 "url_investment_guidelines": {
                     "type": "string",
-                    "description": "URL where the document can be found in the DMS"
+                    "description": "URL where the document can be found in the DMS",
                 },
                 "client": {
                     "type": "string",
-                    "description": "Client number as defined in the document management system"
-                }
-            }
-        }
+                    "description": "Client number as defined in the document management system",
+                },
+            },
+        },
     }
 ]
 
@@ -75,24 +75,81 @@ SENT_SPLIT_RE = re.compile(r"(?:\n\s*[-•]\s*|\n{2,}|(?<=[\.\!\?\:\;])\s+)")
 
 # Expand stopwords (non-tickers that happen to be uppercase)
 UPPER_STOP = {
-    "AND","OR","NOT","ANY","ALL","THE","FUND","FUNDS","ETF","ETFS","INDEX","INDICES",
-    "USA","US","USD","NYSE","NASDAQ","AMEX","OTC","S&P","DJIA","RUSSELL","NO","BUY","SELL",
-    "HOLD","DO","SHALL","MAY","MUST","ARE","IS","IN","OF","ON","TO","FOR","WITH",
+    "AND",
+    "OR",
+    "NOT",
+    "ANY",
+    "ALL",
+    "THE",
+    "FUND",
+    "FUNDS",
+    "ETF",
+    "ETFS",
+    "INDEX",
+    "INDICES",
+    "USA",
+    "US",
+    "USD",
+    "NYSE",
+    "NASDAQ",
+    "AMEX",
+    "OTC",
+    "S&P",
+    "DJIA",
+    "RUSSELL",
+    "NO",
+    "BUY",
+    "SELL",
+    "HOLD",
+    "DO",
+    "SHALL",
+    "MAY",
+    "MUST",
+    "ARE",
+    "IS",
+    "IN",
+    "OF",
+    "ON",
+    "TO",
+    "FOR",
+    "WITH",
 }
 
 # Company suffixes to detect "part-of-a-name" context
 COMPANY_SUFFIXES = {
-    "INC","INC.","CORP","CORPORATION","CO","CO.","COMPANY","LTD","LTD.","PLC","LLC","LP","LLP",
-    "S.A.","S.A","N.V.","NV","AG","SE","SAS","GMBH","BV","AB"
+    "INC",
+    "INC.",
+    "CORP",
+    "CORPORATION",
+    "CO",
+    "CO.",
+    "COMPANY",
+    "LTD",
+    "LTD.",
+    "PLC",
+    "LLC",
+    "LP",
+    "LLP",
+    "S.A.",
+    "S.A",
+    "N.V.",
+    "NV",
+    "AG",
+    "SE",
+    "SAS",
+    "GMBH",
+    "BV",
+    "AB",
 }
 
 # Short, ambiguous tokens that are real tickers sometimes, but easy false positives out of context
-AMBIGUOUS_SHORT = {"AI","UK","EU","US","EV","PE","ESG","ETF","NAV"}
+AMBIGUOUS_SHORT = {"AI", "UK", "EU", "US", "EV", "PE", "ESG", "ETF", "NAV"}
 
 # Cues that usually mean we’re actually talking about tickers / restrictions
 PROHIBITION_CUES_RE = re.compile(
     r"\b(prohibit|restricted|ban|blacklist|forbid|do not (?:own|purchase|hold)|"
-    r"not permitted|disallow|exclude|avoid no (?:new )?positions?)\b", re.I
+    r"not permitted|disallow|exclude|avoid no (?:new )?positions?)\b",
+    re.I,
 )
 
 # Avoid matching tokens that are immediately followed by rating-style suffixes like "-1" or "+"
@@ -103,11 +160,26 @@ TICKER_RE = re.compile(r"\b([A-Z]{1,5}(?:\.[A-Z])?)\b(?!\s*[-–—-]\s*\d|\s*[+
 RATING_CONTEXT_RE = re.compile(
     r"\b(rating|ratings|rated|credit\s+quality|commercial\s+paper|CP|money\s+market|"
     r"moody'?s|standard\s*&\s*poor'?s|s&?p\b|fitch|dbrs|kroll)\b",
-    re.I
+    re.I,
 )
 
 # Single/short tokens commonly used in ratings vocab; we skip them in rating contexts
-RATING_START_TOKENS = {"A","AA","AAA","B","BB","BBB","C","CC","CCC","D","P","F","R"}
+RATING_START_TOKENS = {
+    "A",
+    "AA",
+    "AAA",
+    "B",
+    "BB",
+    "BBB",
+    "C",
+    "CC",
+    "CCC",
+    "D",
+    "P",
+    "F",
+    "R",
+}
+
 
 # ---- Helpers ----
 def json_args():
@@ -116,17 +188,21 @@ def json_args():
         return {}, ("Invalid or missing JSON body.", 400)
     return data, None
 
+
 def split_sentences(text: str) -> List[str]:
     parts = SENT_SPLIT_RE.split(text)
     # Clean & keep only non-empty lines with a bit of body
     return [p.strip() for p in parts if p and len(p.strip()) >= 3]
 
+
 def _next_words(text: str, start: int, max_chars: int = 24) -> str:
-    return text[start:start+max_chars]
+    return text[start : start + max_chars]
+
 
 def _prev_words(text: str, end: int, max_chars: int = 24) -> str:
     b = max(0, end - max_chars)
     return text[b:end]
+
 
 def _looks_like_company_context(text: str, start: int, end: int) -> bool:
     """
@@ -155,7 +231,9 @@ def _looks_like_company_context(text: str, start: int, end: int) -> bool:
 
     # 2) TitleCase before + immediate comma, then company suffix soon after
     if _is_titlecase(prev_word) and after.lstrip().startswith(","):
-        if re.search(r"^\s*,\s*(?:" + "|".join(COMPANY_SUFFIXES) + r")\b\.?", after, re.I):
+        if re.search(
+            r"^\s*,\s*(?:" + "|".join(COMPANY_SUFFIXES) + r")\b\.?", after, re.I
+        ):
             return True
 
     # 3) TitleCase before and after (multi-word company name), e.g., 'Foo AI Holdings'
@@ -164,16 +242,19 @@ def _looks_like_company_context(text: str, start: int, end: int) -> bool:
 
     return False
 
+
 def _is_parenthesized_ticker(text: str, start: int, end: int) -> bool:
     """Allow patterns like 'C3.ai (AI)'."""
     before = _prev_words(text, start, 3)
     after = _next_words(text, end, 3)
     return "(" in before or ")" in after  # relaxed but effective for '(TICKER)'
 
+
 def _is_exchange_colon_pattern(text: str, start: int) -> bool:
     # Accept patterns like "NYSE: A" or "NASDAQ: C"
-    lookback = text[max(0, start - 12):start].upper()
+    lookback = text[max(0, start - 12) : start].upper()
     return any(x in lookback for x in ("NYSE:", "NASDAQ:", "AMEX:", "CBOE:", "BATS:"))
+
 
 def _is_rating_tail(after: str) -> bool:
     """
@@ -182,6 +263,7 @@ def _is_rating_tail(after: str) -> bool:
     """
     return bool(re.match(r"^\s*[-–—-]?\s*(?:\d(?:\s*\((?:low|high)\))?|[+-])", after))
 
+
 def _is_credit_rating_token(token: str, line: str, start: int, end: int) -> bool:
     """
     Decide if token (A, AA, P, F, etc.) is acting as a rating, not a ticker.
@@ -189,12 +271,17 @@ def _is_credit_rating_token(token: str, line: str, start: int, end: int) -> bool
       - Immediately followed by a rating tail (e.g., '-1', '+', '-')
       - Line contains rating context words and token is a common rating prefix
     """
-    after = line[end:end+12]
+    after = line[end : end + 12]
     if _is_rating_tail(after):
         return True
-    if RATING_CONTEXT_RE.search(line) and token in RATING_START_TOKENS and len(token) <= 3:
+    if (
+        RATING_CONTEXT_RE.search(line)
+        and token in RATING_START_TOKENS
+        and len(token) <= 3
+    ):
         return True
     return False
+
 
 def extract_tickers(line: str) -> List[str]:
     """
@@ -226,21 +313,31 @@ def extract_tickers(line: str) -> List[str]:
         # STRONGER RULES for very short tokens (1–2 letters):
         # Only accept if parenthesized OR exchange-colon pattern OR explicit prohibition cues.
         if len(c) <= 2:
-            if not (_is_parenthesized_ticker(line, s, e) or _is_exchange_colon_pattern(line, s) or has_cues):
+            if not (
+                _is_parenthesized_ticker(line, s, e)
+                or _is_exchange_colon_pattern(line, s)
+                or has_cues
+            ):
                 continue
 
         # For 2–3 letter highly ambiguous tokens (e.g., 'AI'), also require stronger context
-        if len(c) == 2 and c in {"AI","US","EU","UK","EV","PE","ES","ET","CP"}:
-            if not (_is_parenthesized_ticker(line, s, e) or _is_exchange_colon_pattern(line, s) or has_cues):
+        if len(c) == 2 and c in {"AI", "US", "EU", "UK", "EV", "PE", "ES", "ET", "CP"}:
+            if not (
+                _is_parenthesized_ticker(line, s, e)
+                or _is_exchange_colon_pattern(line, s)
+                or has_cues
+            ):
                 continue
 
         tickers.append(c)
 
     return tickers
 
+
 # ----------------------------
 # Model train / save / load
 # ----------------------------
+
 
 def train_default_model() -> Pipeline:
     """
@@ -378,21 +475,33 @@ def train_default_model() -> Pipeline:
     X = positives + negatives
     y = [1] * len(positives) + [0] * len(negatives)
 
-    model = Pipeline([
-        ("tfidf", TfidfVectorizer(ngram_range=(1, 2), lowercase=True, max_features=8000)),
-        ("mlp", MLPClassifier(hidden_layer_sizes=(64,),
-                              activation="relu",
-                              solver="adam",
-                              random_state=42,
-                              max_iter=400))
-    ])
+    model = Pipeline(
+        [
+            (
+                "tfidf",
+                TfidfVectorizer(ngram_range=(1, 2), lowercase=True, max_features=8000),
+            ),
+            (
+                "mlp",
+                MLPClassifier(
+                    hidden_layer_sizes=(64,),
+                    activation="relu",
+                    solver="adam",
+                    random_state=42,
+                    max_iter=400,
+                ),
+            ),
+        ]
+    )
     model.fit(X, y)
     return model
+
 
 def ensure_dir(path: str):
     d = os.path.dirname(os.path.abspath(path))
     if d and not os.path.exists(d):
         os.makedirs(d, exist_ok=True)
+
 
 def save_model(model: Pipeline, path: str) -> str:
     ensure_dir(path)
@@ -400,10 +509,11 @@ def save_model(model: Pipeline, path: str) -> str:
         "model": model,
         "saved_at": datetime.utcnow().isoformat() + "Z",
         "sklearn_version": getattr(model, "__module__", "sklearn"),
-        "type": "prohibition_mlp_pipeline_v1"
+        "type": "prohibition_mlp_pipeline_v1",
     }
     joblib.dump(payload, path)
     return path
+
 
 def load_model(path: str) -> Pipeline:
     payload = joblib.load(path)
@@ -414,9 +524,11 @@ def load_model(path: str) -> Pipeline:
         return payload["model"]
     raise ValueError("Unrecognized model file format")
 
+
 model_lock = Lock()
 clf: Pipeline = None
 last_loaded_from = None
+
 
 def bootstrap_model():
     global clf, last_loaded_from
@@ -433,6 +545,7 @@ def bootstrap_model():
     save_model(clf, MODEL_PATH)
     last_loaded_from = os.path.abspath(MODEL_PATH)
 
+
 bootstrap_model()
 
 
@@ -444,7 +557,7 @@ def fetch_pdf_text(url: str, timeout: int = 30) -> str:
         requests.HTTPError for non-2xx responses
         requests.RequestException for network issues
         Exception for parsing issues
-     """
+    """
 
     # Get the doc from a remote URL (in chunks if needed)
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -470,7 +583,6 @@ def list_tools():
 
 @app.post("/tools/prohibited_symbols")
 def prohibited_symbols():
-
     # Parse parameters
     data, err = json_args()
     if err:
@@ -480,7 +592,7 @@ def prohibited_symbols():
     THRESH = float(data.get("threshold", 0.65))
 
     # If you want to simplify, just return with this array
-    #return ["DUK", "PM", "XOM", "COP","CVX"]
+    # return ["DUK", "PM", "XOM", "COP","CVX"]
 
     # Get investment guidelines - either locally in DMS or remote URL
     file_path = "docs/client-" + client + "/investment-guidelines.pdf"
@@ -490,13 +602,21 @@ def prohibited_symbols():
         text = extract_text(file_path)
     else:
         # Fetch doc from specified URL
-        print(f"Fetching investment guidelines from remote url: {url_investment_guidelines}")
+        print(
+            f"Fetching investment guidelines from remote url: {url_investment_guidelines}"
+        )
         text = fetch_pdf_text(url_investment_guidelines)
 
     # Split doc into sentences
     sentences = split_sentences(text)
     if not sentences:
-        return jsonify({"prohibited_tickers": [], "matches": [], "meta": {"num_sentences": 0, "num_matches": 0}})
+        return jsonify(
+            {
+                "prohibited_tickers": [],
+                "matches": [],
+                "meta": {"num_sentences": 0, "num_matches": 0},
+            }
+        )
 
     # Get model
     with model_lock:
@@ -510,11 +630,9 @@ def prohibited_symbols():
         if p >= THRESH:
             toks = [t for t in extract_tickers(sent) if t not in UPPER_STOP]
             if toks:
-                matches.append({
-                    "sentence": sent,
-                    "tickers": toks,
-                    "score": round(float(p), 4)
-                })
+                matches.append(
+                    {"sentence": sent, "tickers": toks, "score": round(float(p), 4)}
+                )
                 tickers_set.update(toks)
 
     result = {
@@ -523,8 +641,8 @@ def prohibited_symbols():
         "meta": {
             "num_sentences": len(sentences),
             "num_matches": len(matches),
-            "threshold": THRESH
-        }
+            "threshold": THRESH,
+        },
     }
     return jsonify(result), 200
 
@@ -606,7 +724,7 @@ def prohibited_symbols():
 #             return jsonify({"ok": True, "saved_to": os.path.abspath(path)}), 200
 #         except Exception as e:
 #             return jsonify({"ok": False, "error": str(e)}), 500
-        
+
 
 # @app.route("/model/load", methods=["POST"])
 # def model_load():
@@ -626,7 +744,7 @@ def prohibited_symbols():
 #             return jsonify({"ok": True, "loaded_from": last_loaded_from}), 200
 #         except Exception as e:
 #             return jsonify({"ok": False, "error": str(e)}), 500
-        
+
 
 # ---- Entrypoint ----
 if __name__ == "__main__":

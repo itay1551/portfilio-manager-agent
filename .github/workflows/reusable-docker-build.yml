@@ -1,5 +1,4 @@
 name: Reusable Docker Build
-
 on:
   workflow_call:
     inputs:
@@ -24,24 +23,19 @@ on:
         required: true
       QUAY_PASSWORD:
         required: true
-
 env:
   REGISTRY: quay.io
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Log in to Quay.io
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -49,7 +43,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
-
       - name: Extract metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
@@ -59,7 +52,6 @@ jobs:
             type=raw,value=${{ inputs.service_tag }},enable={{is_default_branch}}
             type=raw,value=${{ inputs.service_tag }}-{{sha}},enable={{is_default_branch}}
             type=ref,event=pr,prefix=${{ inputs.service_tag }}-pr-
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:

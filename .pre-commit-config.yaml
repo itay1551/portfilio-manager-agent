@@ -9,7 +9,7 @@ repos:
     hooks:
       - id: yamlfmt
         # Helm-rendered YAML is not valid static YAML (e.g. toYaml | nindent blocks).
-        exclude: ^(deploy/helm/.*/templates/|tenant/.*/templates/)
+        exclude: ^(deploy/helm/templates/|tenant/.*/templates/)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:

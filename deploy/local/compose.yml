@@ -16,7 +16,6 @@ services:
       orchestrator:
         condition: service_started
     restart: unless-stopped
-
   orchestrator:
     build:
       context: ../../orchestrator/src
@@ -26,9 +25,7 @@ services:
       PORT: "5000"
       PYTHONUNBUFFERED: "1"
       TOOL_SERVERS: >-
-        http://risk:7001,
-        http://portfolio:7002,
-        http://guidelines:7003
+        http://risk:7001, http://portfolio:7002, http://guidelines:7003
     depends_on:
       risk:
         condition: service_started
@@ -37,7 +34,6 @@ services:
       guidelines:
         condition: service_started
     restart: unless-stopped
-
   risk:
     build:
       context: ../../tools/value_at_risk/src
@@ -47,7 +43,6 @@ services:
       PORT: "7001"
       PYTHONUNBUFFERED: "1"
     restart: unless-stopped
-
   portfolio:
     build:
       context: ../../tools/portfolio/src
@@ -57,7 +52,6 @@ services:
       PORT: "7002"
       PYTHONUNBUFFERED: "1"
     restart: unless-stopped
-
   guidelines:
     build:
       context: ../../tools/guidelines/src

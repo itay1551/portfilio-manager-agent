@@ -1,5 +1,4 @@
 name: Deploy Manifest Checks
-
 on:
   pull_request:
     branches: [main]
@@ -11,27 +10,21 @@ on:
     paths:
       - 'deploy/**'
   workflow_dispatch:
-
 jobs:
   helm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: azure/setup-helm@v4
         with:
           version: v3.14.0
-
       - name: Helm lint
         run: helm lint deploy/helm
-
       - name: Helm template
         run: helm template ci-test deploy/helm
-
   compose:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Validate compose file
         run: podman compose -f deploy/local/compose.yml config

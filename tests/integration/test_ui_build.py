@@ -15,7 +15,9 @@ def test_ui_assets_contain_llm_host():
     if not config.llm_url:
         pytest.skip("OPENAI_API_ENDPOINT not set")
 
-    llm_host = config.llm_url.replace("https://", "").replace("http://", "").split("/")[0]
+    llm_host = (
+        config.llm_url.replace("https://", "").replace("http://", "").split("/")[0]
+    )
     compose_file = ROOT / "deploy/local/compose.yml"
     cmd = [
         "podman",

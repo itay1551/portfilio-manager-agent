@@ -10,16 +10,19 @@ from openai import OpenAI
 # Models & Helpers
 # ----------------------------
 
+
 @dataclass
 class DiscoveredTool:
     name: str
     description: str
-    parameters: dict   # JSON Schema
-    server_base: str   # which HTTP server hosts it
+    parameters: dict  # JSON Schema
+    server_base: str  # which HTTP server hosts it
+
 
 # ----------------------------
 # HTTP Tool Server Adapter (same simple shape)
 # ----------------------------
+
 
 class HttpToolServer:
     def __init__(self, base_url: str, timeout: float = 30.0):
@@ -36,10 +39,12 @@ class HttpToolServer:
         for item in resp.json():
             tools.append(
                 DiscoveredTool(
-                    name        = item["name"],
-                    description = item.get("description", ""),
-                    parameters  = item.get("parameters", {"type": "object", "properties": {}}),
-                    server_base = self.base_url
+                    name=item["name"],
+                    description=item.get("description", ""),
+                    parameters=item.get(
+                        "parameters", {"type": "object", "properties": {}}
+                    ),
+                    server_base=self.base_url,
                 )
             )
         return tools
@@ -50,12 +55,20 @@ class HttpToolServer:
         resp.raise_for_status()
         return resp.json()
 
+
 # -----------------------------
 # MCP style client Orchestrator
 # -----------------------------
 
+
 class Orchestrator:
-    def __init__(self, openai_client: OpenAI, model: str, servers: list[HttpToolServer], request_timeout: float = 60.0):
+    def __init__(
+        self,
+        openai_client: OpenAI,
+        model: str,
+        servers: list[HttpToolServer],
+        request_timeout: float = 60.0,
+    ):
         self.openai = openai_client
         self.model = model
         self.servers = servers
@@ -71,12 +84,14 @@ class Orchestrator:
                 if tool.name in self.tool_registry:
                     raise ValueError(f"Duplicate tool name discovered: {tool.name}")
                 self.tool_registry[tool.name] = tool
-                advertised.append({
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.parameters,
-                    "server_base": tool.server_base
-                })
+                advertised.append(
+                    {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.parameters,
+                        "server_base": tool.server_base,
+                    }
+                )
         return advertised
 
     def tools_payload(self) -> list[dict]:
@@ -87,7 +102,7 @@ class Orchestrator:
                     "name": t_.name,
                     "description": t_.description,
                     "parameters": t_.parameters,
-                }
+                },
             }
             for t_ in self.tool_registry.values()
         ]
@@ -97,7 +112,11 @@ class Orchestrator:
         if tool is None:
             return {"error": f"Unknown tool: {name}"}
         try:
-            args = json.loads(arguments_json) if isinstance(arguments_json, str) else (arguments_json or {})
+            args = (
+                json.loads(arguments_json)
+                if isinstance(arguments_json, str)
+                else (arguments_json or {})
+            )
         except json.JSONDecodeError as e:
             return {"error": f"Invalid JSON args for {name}: {e}"}
 
@@ -107,7 +126,9 @@ class Orchestrator:
         try:
             return server.call(name, args)
         except requests.HTTPError as e:
-            return {"error": f"HTTP error from {name}: {e.response.status_code} {e.response.text}"}
+            return {
+                "error": f"HTTP error from {name}: {e.response.status_code} {e.response.text}"
+            }
         except Exception as e:
             return {"error": f"Tool {name} failed: {e}"}
 
@@ -157,26 +178,30 @@ class Orchestrator:
                 if on_tool_result and not (
                     isinstance(result, dict) and result.get("error")
                 ):
-                    on_tool_result(
-                        function_call_name, result, function_call_arguments
-                    )
+                    on_tool_result(function_call_name, result, function_call_arguments)
 
-                prompts.append({
-                    "role": "assistant",
-                    "content": response.choices[0].message.content,
-                    "tool_calls": [item],
-                })
-                prompts.append({
-                    "role": "tool",
-                    "tool_call_id": item.id,
-                    "name": function_call_name,
-                    "content": json.dumps(result),
-                })
-                tool_history.append({
-                    "name": function_call_name,
-                    "args": function_call_arguments,
-                    "result": result,
-                })
+                prompts.append(
+                    {
+                        "role": "assistant",
+                        "content": response.choices[0].message.content,
+                        "tool_calls": [item],
+                    }
+                )
+                prompts.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": item.id,
+                        "name": function_call_name,
+                        "content": json.dumps(result),
+                    }
+                )
+                tool_history.append(
+                    {
+                        "name": function_call_name,
+                        "args": function_call_arguments,
+                        "result": result,
+                    }
+                )
 
         return {
             "content": response.choices[0].message.content if response else "",
@@ -186,7 +211,9 @@ class Orchestrator:
             "llm_count": llm_count,
         }
 
-    def chat_agentic(self, system_prompt: str, user_prompt: str, temperature: float = 0.2) -> dict:
+    def chat_agentic(
+        self, system_prompt: str, user_prompt: str, temperature: float = 0.2
+    ) -> dict:
         if not self.tool_registry:
             self.refresh_tools()
 
@@ -194,9 +221,7 @@ class Orchestrator:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-        return self._run_agentic_loop(
-            prompts, self.tools_payload(), temperature
-        )
+        return self._run_agentic_loop(prompts, self.tools_payload(), temperature)
 
     def refresh_tools_filtered(self, allowed_names: set[str]) -> None:
         """Discover tools and keep only those in allowed_names."""
@@ -243,6 +268,4 @@ class Orchestrator:
                 prompts.append({"role": role, "content": content})
 
         tools = self.tools_payload() if self.tool_registry else None
-        return self._run_agentic_loop(
-            prompts, tools, temperature, on_tool_result
-        )
+        return self._run_agentic_loop(prompts, tools, temperature, on_tool_result)

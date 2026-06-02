@@ -1,7 +1,7 @@
 # Name:     app.py
 # Purpose:  Calculate value at risk for a portfolio of US equities using the variance-covariance method
 # Author:   Aric Rosenbaum
- 
+
 
 import datetime
 import ast
@@ -13,7 +13,7 @@ import os
 
 app = Flask(__name__)
 
-'''
+"""
 “Calculate the value of my portfolio with a 95% confidence interval given these positions: …”
 and it will automatically call this tool.
 
@@ -33,7 +33,7 @@ POST http://localhost:7001/tools/value_at_risk
     ]
 }
 
-'''
+"""
 
 
 # ---- Advertised tools (JSON Schema params) ----
@@ -49,7 +49,7 @@ TOOLS = [
                     "type": "integer",
                     "description": "Confidence interval (i.e. 90, 95 or 99)",
                     "minimum": 50,
-                    "maximum": 99
+                    "maximum": 99,
                 },
                 "portfolio": {
                     "type": "array",
@@ -58,17 +58,17 @@ TOOLS = [
                         "properties": {
                             "symbol": {
                                 "type": "string",
-                                "description": "Ticker symbol, e.g., IBM, NVDA"
+                                "description": "Ticker symbol, e.g., IBM, NVDA",
                             },
                             "quantity": {
                                 "type": "integer",
-                                "description": "Number of shares held"
-                            }
-                        }
-                    }
-                }
-            }
-        }
+                                "description": "Number of shares held",
+                            },
+                        },
+                    },
+                },
+            },
+        },
     }
 ]
 
@@ -79,6 +79,7 @@ def json_args():
     if data is None:
         return {}, ("Invalid or missing JSON body.", 400)
     return data, None
+
 
 # ---- Routes ----
 @app.get("/tools")

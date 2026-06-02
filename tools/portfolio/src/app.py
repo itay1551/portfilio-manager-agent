@@ -2,16 +2,15 @@
 # Purpose:  Build a stock portfolio
 # Author:   Aric Rosenbaum
 
- 
+
 from flask import Flask, request, jsonify
-import ast
 import os
 import random
 import yfinance as yf
 
 app = Flask(__name__)
 
-'''
+"""
 Design a portfolio based on specified criteria:
   - Portfolio size in US$ (default = 1m)
   - Excluded ticker symbols (default = none)
@@ -29,7 +28,7 @@ POST http://localhost:7002/tools/portfolio_equities
   "qty_symbols": 5
 }
 
-'''
+"""
 
 
 # ---- Advertised tools for Agentic AI consumption (JSON Schema params) ----
@@ -44,22 +43,22 @@ TOOLS = [
                 "portfolio_value": {
                     "type": "number",
                     "description": "Do not exceed value of portfolio",
-                    "minimum": 0
+                    "minimum": 0,
                 },
                 "qty_symbols": {
                     "type": "number",
                     "description": "Quantity of ticker symbols to include in the portfolio",
-                    "minimum": 0
+                    "minimum": 0,
                 },
                 "symbols_exclusion": {
                     "type": "array",
                     "description": "List of ticker symbols to exclude from the portfolio, e.g., IBM, NVDA",
                     "items": {
                         "type": "string",
-                    }
-                }
-            }
-        }
+                    },
+                },
+            },
+        },
     },
     {
         "type": "function",
@@ -105,16 +104,107 @@ TOOLS = [
 # Define universe of S&P 100 stocks.
 #   n.b. - In prod, this would likely be available via a web service or sitting in cache
 SP_100 = [
-  "AAPL", "ABBV", "ABT", "ACN", "ADBE", "AIG", "AMD", "AMGN", "AMT", "AMZN",
-  "AVGO", "AXP", "BA", "BAC", "BK", "BKNG", "BLK", "BMY", "BRK-B", "C",
-  "CAT", "CHTR", "CL", "CMCSA", "COF", "COP", "COST", "CRM", "CSCO", "CVS",
-  "CVX", "DE", "DHR", "DIS", "DUK", "EMR", "FDX", "GD", "GE", "GILD",
-  "GM", "GOOG", "GOOGL", "GS", "HD", "HON", "IBM", "INTC", "INTU", "ISRG",
-  "JNJ", "JPM", "KO", "LIN", "LLY", "LMT", "LOW", "MA", "MCD", "MDLZ",
-  "MDT", "MET", "META", "MMM", "MO", "MRK", "MS", "MSFT", "NEE", "NFLX",
-  "NKE", "NOW", "NVDA", "ORCL", "PEP", "PFE", "PG", "PLTR", "PM", "PYPL",
-  "QCOM", "RTX", "SBUX", "SCHW", "SO", "SPG", "T", "TGT", "TMO", "TMUS",
-  "TSLA", "TXN", "UNH", "UNP", "UPS", "USB", "V", "VZ", "WFC", "WMT", "XOM"
+    "AAPL",
+    "ABBV",
+    "ABT",
+    "ACN",
+    "ADBE",
+    "AIG",
+    "AMD",
+    "AMGN",
+    "AMT",
+    "AMZN",
+    "AVGO",
+    "AXP",
+    "BA",
+    "BAC",
+    "BK",
+    "BKNG",
+    "BLK",
+    "BMY",
+    "BRK-B",
+    "C",
+    "CAT",
+    "CHTR",
+    "CL",
+    "CMCSA",
+    "COF",
+    "COP",
+    "COST",
+    "CRM",
+    "CSCO",
+    "CVS",
+    "CVX",
+    "DE",
+    "DHR",
+    "DIS",
+    "DUK",
+    "EMR",
+    "FDX",
+    "GD",
+    "GE",
+    "GILD",
+    "GM",
+    "GOOG",
+    "GOOGL",
+    "GS",
+    "HD",
+    "HON",
+    "IBM",
+    "INTC",
+    "INTU",
+    "ISRG",
+    "JNJ",
+    "JPM",
+    "KO",
+    "LIN",
+    "LLY",
+    "LMT",
+    "LOW",
+    "MA",
+    "MCD",
+    "MDLZ",
+    "MDT",
+    "MET",
+    "META",
+    "MMM",
+    "MO",
+    "MRK",
+    "MS",
+    "MSFT",
+    "NEE",
+    "NFLX",
+    "NKE",
+    "NOW",
+    "NVDA",
+    "ORCL",
+    "PEP",
+    "PFE",
+    "PG",
+    "PLTR",
+    "PM",
+    "PYPL",
+    "QCOM",
+    "RTX",
+    "SBUX",
+    "SCHW",
+    "SO",
+    "SPG",
+    "T",
+    "TGT",
+    "TMO",
+    "TMUS",
+    "TSLA",
+    "TXN",
+    "UNH",
+    "UNP",
+    "UPS",
+    "USB",
+    "V",
+    "VZ",
+    "WFC",
+    "WMT",
+    "XOM",
 ]
 
 
@@ -125,9 +215,10 @@ def json_args():
         return {}, ("Invalid or missing JSON body.", 400)
     return data, None
 
+
 def last_price(symbol):
     data = yf.Ticker(symbol)
-    price = data.history(period='10d')['Close'].iloc[-1]
+    price = data.history(period="10d")["Close"].iloc[-1]
     return round(price, 3)
 
 
@@ -147,7 +238,6 @@ def list_tools():
 
 @app.post("/tools/portfolio_equities")
 def portfolio_equities():
-
     # Parse parameters
     data, err = json_args()
     portfolio = []
@@ -164,7 +254,9 @@ def portfolio_equities():
             if symbol not in symbols_exclusion:
                 price = last_price(symbol)
                 shares = int(requested_portfolio_value / qty_symbols / price)
-                portfolio.append({"symbol": symbol, "quantity": shares, "last_price": price})       
+                portfolio.append(
+                    {"symbol": symbol, "quantity": shares, "last_price": price}
+                )
     except Exception as e:
         print(e)
         return jsonify({"error": f"Tool: 'portfolio_equities' failed: {e}"}), 500
@@ -199,11 +291,13 @@ def portfolio_replace_symbol():
         price = last_price(replacement)
         slot_value = portfolio_value / len(portfolio)
         shares = int(slot_value / price)
-        kept.append({
-            "symbol": replacement,
-            "quantity": shares,
-            "last_price": price,
-        })
+        kept.append(
+            {
+                "symbol": replacement,
+                "quantity": shares,
+                "last_price": price,
+            }
+        )
         return kept
     except Exception as e:
         print(e)
@@ -220,7 +314,6 @@ def echo():
 
 @app.post("/tools/echo2")
 def echo2():
-
     print("----- REQUEST DEBUG -----")
     print("Method:", request.method)
     print("Headers:", dict(request.headers))
@@ -233,18 +326,20 @@ def echo2():
     if err:
         return err
     return jsonify({"echo": data.get("text", "")})
-    #print("data:", data)
-    #print("err:", err)    
-    #return jsonify({"echo": "DEBUG"})
+    # print("data:", data)
+    # print("err:", err)
+    # return jsonify({"echo": "DEBUG"})
 
 
 @app.post("/tools/post-text")
 def post_text():
     return "It works"
 
+
 @app.post("/tools/post-json")
 def post_json():
     return jsonify({"echo": "It works"})
+
 
 # ---- Entrypoint ----
 if __name__ == "__main__":

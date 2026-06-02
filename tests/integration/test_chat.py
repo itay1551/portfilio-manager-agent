@@ -59,7 +59,10 @@ def test_chat_rejects_first_holding(http_client: httpx.Client, llm_config: LlmCo
 
     symbols = [row["symbol"] for row in updated["portfolio"]]
     assert disliked_symbol not in symbols
-    assert portfolio_overlap(updated.get("prohibited_tickers", []), updated["portfolio"]) == []
+    assert (
+        portfolio_overlap(updated.get("prohibited_tickers", []), updated["portfolio"])
+        == []
+    )
 
     tool_names = [entry.get("name") for entry in chat_data.get("tool_history", [])]
     assert "portfolio_replace_symbol" in tool_names
