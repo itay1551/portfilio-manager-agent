@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a **AI portfolio management system** — a demo combining an LLM orchestrator with specialized financial tool agents.
+This is the **Investment Advisor Agent** — a demo combining an LLM orchestrator with specialized financial tool agents.
 
 **Stack:** Python 3.11/3.12, Flask, React + Vite, OpenAI SDK, scikit-learn, yfinance, Podman/Docker Compose, OpenShift/Knative.
 
@@ -174,7 +174,33 @@ Edit `frontend/src/`. React components live in `components/`, pipeline logic in 
 ./build-script/build_script.sh
 ```
 
-Images are tagged for `quay.io/aric-rosenbaum/neurosymbolic-ai/*`.
+Images are tagged for `quay.io/ikatav/portfolio-manager-agent:<service-name>`.
+
+### Running tests
+
+**CI (no live stack):**
+- Frontend: `npm test` and `npm run build` in `frontend/`
+- Python unit: `pytest tests/unit -m unit` (see `.github/workflows/test-python.yml`)
+- Deploy manifests: `helm lint`, `helm template`, `podman compose config` (see `.github/workflows/test-deploy.yml`)
+
+**Local unit tests:**
+
+```bash
+pip install -r tests/requirements.txt
+pip install -r orchestrator/src/requirements.txt
+pip install scikit-learn pdfminer.six joblib
+make test-unit
+```
+
+**Local integration tests (stack must be running):**
+
+```bash
+make deploy-local   # terminal 1
+make test-integration          # no LLM — health, proxy, granular pipeline, tools
+make test-integration-llm      # includes full /pipeline and /chat (needs real .env)
+```
+
+Integration tests mirror [`.cursor/skills/verify-demo-stack/scripts/verify_ui_api_proxy.sh`](.cursor/skills/verify-demo-stack/scripts/verify_ui_api_proxy.sh) and [`verify_demo_stack.sh`](.cursor/skills/verify-demo-stack/scripts/verify_demo_stack.sh). They are **not** run in CI.
 
 ---
 
@@ -194,4 +220,4 @@ Images are tagged for `quay.io/aric-rosenbaum/neurosymbolic-ai/*`.
 - README references `build/` but actual path is `build-script/`; also references `build/deploy_podman.sh` but the script lives at `deploy/local/deploy_podman.sh`
 - `deploy/local/deploy_podman_multi.sh` creates network `agentic-ai` but references `ai-network`
 - Tool agent `requirements.txt` files contain many unused transitive dependencies (full pip freeze)
-- No automated tests for Python services; UI has Vitest unit tests
+- UI has Vitest unit tests; Python has pytest unit tests in `tests/unit/`; integration tests in `tests/integration/` are local-only
