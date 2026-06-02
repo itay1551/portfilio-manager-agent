@@ -1,0 +1,36 @@
+.logo-bar {
+  position: absolute;
+  top: 20px;
+  left: 22px;
+  right: auto;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  z-index: 1100;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.logo {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+}
+
+.redhat-logo {
+  height: 36px;
+}
+
+@media (max-width: 900px) {
+  .logo-bar {
+    top: 10px;
+    left: 16px;
+  }
+
+  .logo,
+  .redhat-logo {
+    height: 30px;
+  }
+}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CHAT_RUNNING, CHAT_WELCOME_PENDING } from "./api/types";
 import { Chat } from "./components/Chat";
 import { ConnectionSettingsPanel } from "./components/ConnectionSettings";
+import { LogoBar } from "./components/LogoBar";
 import {
   defaultPipelineForm,
   PipelineSetup,
@@ -69,56 +70,61 @@ export default function App() {
   }, [chatInput, chat, settings, pipeline]);
 
   return (
-    <div className="app-container">
+    <div className="app">
+      <LogoBar />
       <header className="app-header">
-        <h1>Neurosymbolic AI Demo</h1>
-        <p className="subtitle">Powered by NVIDIA and Red Hat</p>
+        <h1 className="main-title">Investment Advisor Agent</h1>
+        <p className="subtitle">
+          Powered by <span className="redhat-accent">Red Hat OpenShift AI</span>
+        </p>
       </header>
 
-      <ConnectionSettingsPanel
-        settings={settings}
-        open={connectionOpen}
-        onToggle={() => setConnectionOpen((v) => !v)}
-        onChange={updateSettings}
-      />
+      <div className="content-wrapper">
+        <ConnectionSettingsPanel
+          settings={settings}
+          open={connectionOpen}
+          onToggle={() => setConnectionOpen((v) => !v)}
+          onChange={updateSettings}
+        />
 
-      <Chat
-        visible={chatVisible}
-        interactive={chatInteractive}
-        messages={chat.displayMessages}
-        input={chatInput}
-        sending={chat.sending}
-        onInputChange={setChatInput}
-        onSend={handleSendChat}
-        onClear={() => {
-          chat.clearChat();
-          setChatInput("");
-          if (pipeline.isComplete) {
-            chat.unlockChat();
-          } else if (pipeline.isRunning) {
-            chat.setWelcomeMessage(CHAT_RUNNING);
-          } else {
-            chat.setWelcomeMessage(CHAT_WELCOME_PENDING);
-          }
-        }}
-      />
+        <Chat
+          visible={chatVisible}
+          interactive={chatInteractive}
+          messages={chat.displayMessages}
+          input={chatInput}
+          sending={chat.sending}
+          onInputChange={setChatInput}
+          onSend={handleSendChat}
+          onClear={() => {
+            chat.clearChat();
+            setChatInput("");
+            if (pipeline.isComplete) {
+              chat.unlockChat();
+            } else if (pipeline.isRunning) {
+              chat.setWelcomeMessage(CHAT_RUNNING);
+            } else {
+              chat.setWelcomeMessage(CHAT_WELCOME_PENDING);
+            }
+          }}
+        />
 
-      <PipelineOutputs
-        outputs={pipeline.outputs}
-        open={outputsOpen}
-        visible={pipeline.hasStarted}
-        onToggle={() => setOutputsOpen((v) => !v)}
-      />
+        <PipelineOutputs
+          outputs={pipeline.outputs}
+          open={outputsOpen}
+          visible={pipeline.hasStarted}
+          onToggle={() => setOutputsOpen((v) => !v)}
+        />
 
-      <PipelineSetup
-        open={setupOpen}
-        onToggle={() => setSetupOpen((v) => !v)}
-        form={form}
-        onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
-        onRun={handleRunPipeline}
-        logLines={pipeline.logLines}
-        running={pipeline.isRunning}
-      />
+        <PipelineSetup
+          open={setupOpen}
+          onToggle={() => setSetupOpen((v) => !v)}
+          form={form}
+          onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+          onRun={handleRunPipeline}
+          logLines={pipeline.logLines}
+          running={pipeline.isRunning}
+        />
+      </div>
     </div>
   );
 }
