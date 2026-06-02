@@ -7,6 +7,10 @@ on:
         required: true
         type: string
         description: 'The image name (without registry prefix)'
+      service_tag:
+        required: true
+        type: string
+        description: 'Service-specific tag (e.g. ui, orchestrator, risk)'
       context:
         required: true
         type: string
@@ -52,9 +56,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ inputs.image_name }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=,format=short
-            type=ref,event=pr
+            type=raw,value=${{ inputs.service_tag }},enable={{is_default_branch}}
+            type=raw,value=${{ inputs.service_tag }}-{{sha}},enable={{is_default_branch}}
+            type=ref,event=pr,prefix=${{ inputs.service_tag }}-pr-
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5

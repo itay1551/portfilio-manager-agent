@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: container
-          image: {{ .Values.image.registry }}/ui:{{ .Values.image.tag }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tags.ui }}
           ports:
             - containerPort: 8080
               protocol: TCP

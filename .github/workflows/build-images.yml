@@ -57,28 +57,28 @@ jobs:
           # On workflow_dispatch, build all services
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             services='[
-              {"name":"ui","image_name":"aric-rosenbaum/neurosymbolic-ai/ui","context":"./frontend","dockerfile":"./frontend/Dockerfile"},
-              {"name":"orchestrator","image_name":"aric-rosenbaum/neurosymbolic-ai/orchestrator","context":"./orchestrator/src","dockerfile":"./orchestrator/src/Dockerfile"},
-              {"name":"risk","image_name":"aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-risk","context":"./tools/value_at_risk/src","dockerfile":"./tools/value_at_risk/src/Dockerfile"},
-              {"name":"portfolio","image_name":"aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-portfolio","context":"./tools/portfolio/src","dockerfile":"./tools/portfolio/src/Dockerfile"},
-              {"name":"guidelines","image_name":"aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-guidelines","context":"./tools/guidelines/src","dockerfile":"./tools/guidelines/src/Dockerfile"}
+              {"name":"ui","image_name":"ikatav/portfolio-manager-agent","service_tag":"ui","context":"./frontend","dockerfile":"./frontend/Dockerfile"},
+              {"name":"orchestrator","image_name":"ikatav/portfolio-manager-agent","service_tag":"orchestrator","context":"./orchestrator/src","dockerfile":"./orchestrator/src/Dockerfile"},
+              {"name":"risk","image_name":"ikatav/portfolio-manager-agent","service_tag":"risk","context":"./tools/value_at_risk/src","dockerfile":"./tools/value_at_risk/src/Dockerfile"},
+              {"name":"portfolio","image_name":"ikatav/portfolio-manager-agent","service_tag":"portfolio","context":"./tools/portfolio/src","dockerfile":"./tools/portfolio/src/Dockerfile"},
+              {"name":"guidelines","image_name":"ikatav/portfolio-manager-agent","service_tag":"guidelines","context":"./tools/guidelines/src","dockerfile":"./tools/guidelines/src/Dockerfile"}
             ]'
           else
             services='[]'
             if [ "${{ needs.detect-changes.outputs.ui }}" = "true" ]; then
-              services=$(echo "$services" | jq -c '. + [{"name":"ui","image_name":"aric-rosenbaum/neurosymbolic-ai/ui","context":"./frontend","dockerfile":"./frontend/Dockerfile"}]')
+              services=$(echo "$services" | jq -c '. + [{"name":"ui","image_name":"ikatav/portfolio-manager-agent","service_tag":"ui","context":"./frontend","dockerfile":"./frontend/Dockerfile"}]')
             fi
             if [ "${{ needs.detect-changes.outputs.orchestrator }}" = "true" ]; then
-              services=$(echo "$services" | jq -c '. + [{"name":"orchestrator","image_name":"aric-rosenbaum/neurosymbolic-ai/orchestrator","context":"./orchestrator/src","dockerfile":"./orchestrator/src/Dockerfile"}]')
+              services=$(echo "$services" | jq -c '. + [{"name":"orchestrator","image_name":"ikatav/portfolio-manager-agent","service_tag":"orchestrator","context":"./orchestrator/src","dockerfile":"./orchestrator/src/Dockerfile"}]')
             fi
             if [ "${{ needs.detect-changes.outputs.risk }}" = "true" ]; then
-              services=$(echo "$services" | jq -c '. + [{"name":"risk","image_name":"aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-risk","context":"./tools/value_at_risk/src","dockerfile":"./tools/value_at_risk/src/Dockerfile"}]')
+              services=$(echo "$services" | jq -c '. + [{"name":"risk","image_name":"ikatav/portfolio-manager-agent","service_tag":"risk","context":"./tools/value_at_risk/src","dockerfile":"./tools/value_at_risk/src/Dockerfile"}]')
             fi
             if [ "${{ needs.detect-changes.outputs.portfolio }}" = "true" ]; then
-              services=$(echo "$services" | jq -c '. + [{"name":"portfolio","image_name":"aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-portfolio","context":"./tools/portfolio/src","dockerfile":"./tools/portfolio/src/Dockerfile"}]')
+              services=$(echo "$services" | jq -c '. + [{"name":"portfolio","image_name":"ikatav/portfolio-manager-agent","service_tag":"portfolio","context":"./tools/portfolio/src","dockerfile":"./tools/portfolio/src/Dockerfile"}]')
             fi
             if [ "${{ needs.detect-changes.outputs.guidelines }}" = "true" ]; then
-              services=$(echo "$services" | jq -c '. + [{"name":"guidelines","image_name":"aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-guidelines","context":"./tools/guidelines/src","dockerfile":"./tools/guidelines/src/Dockerfile"}]')
+              services=$(echo "$services" | jq -c '. + [{"name":"guidelines","image_name":"ikatav/portfolio-manager-agent","service_tag":"guidelines","context":"./tools/guidelines/src","dockerfile":"./tools/guidelines/src/Dockerfile"}]')
             fi
           fi
 
@@ -102,6 +102,7 @@ jobs:
       packages: write
     with:
       image_name: ${{ matrix.service.image_name }}
+      service_tag: ${{ matrix.service.service_tag }}
       context: ${{ matrix.service.context }}
       dockerfile: ${{ matrix.service.dockerfile }}
     secrets:

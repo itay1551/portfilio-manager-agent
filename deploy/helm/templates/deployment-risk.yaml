@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: neurosymbolic-ai-risk
+  name: investment-advisor-agent-risk
   namespace: {{ .Values.namespace }}
 spec:
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
-      app: neurosymbolic-ai-risk
+      app: investment-advisor-agent-risk
   template:
     metadata:
       labels:
-        app: neurosymbolic-ai-risk
+        app: investment-advisor-agent-risk
     spec:
       containers:
         - name: container
-          image: {{ .Values.image.registry }}/neurosymbolic-ai-risk:{{ .Values.image.tag }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tags.risk }}
           ports:
             - containerPort: 7001
               protocol: TCP

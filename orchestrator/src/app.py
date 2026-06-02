@@ -96,7 +96,7 @@ def health():
 @app.route("/info", methods=["GET"])
 def info():
     return jsonify({
-        "app_name": "Neurosymbolic AI demo",
+        "app_name": "Investment Advisor Agent",
         "author": "Aric Rosenbaum",
         "version": "1.0.0",
         "max_portfolio_attempts": MAX_PORTFOLIO_ATTEMPTS,

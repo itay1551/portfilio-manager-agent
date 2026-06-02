@@ -3,5 +3,5 @@ kind: Project
 metadata:
   name: {{ .Values.namespace }}
 spec:
-  displayName: "Neurosymbolic AI"
+  displayName: "Investment Advisor Agent"
   description: "Building Better AI Solutions in Financial Services"

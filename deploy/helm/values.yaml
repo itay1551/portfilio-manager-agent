@@ -1,8 +1,13 @@
-namespace: neurosymbolic-ai
+namespace: investment-advisor-agent
 
 image:
-  registry: quay.io/aric-rosenbaum/neurosymbolic-ai
-  tag: latest
+  repository: quay.io/ikatav/portfolio-manager-agent
+  tags:
+    ui: ui
+    orchestrator: orchestrator
+    risk: risk
+    portfolio: portfolio
+    guidelines: guidelines
 
 replicas: 1
 
