@@ -24,6 +24,7 @@ services:
       - "5000:5000"
     environment:
       PORT: "5000"
+      PYTHONUNBUFFERED: "1"
       TOOL_SERVERS: >-
         http://risk:7001,
         http://portfolio:7002,
@@ -44,6 +45,7 @@ services:
       - "7001:7001"
     environment:
       PORT: "7001"
+      PYTHONUNBUFFERED: "1"
     restart: unless-stopped
 
   portfolio:
@@ -53,6 +55,7 @@ services:
       - "7002:7002"
     environment:
       PORT: "7002"
+      PYTHONUNBUFFERED: "1"
     restart: unless-stopped
 
   guidelines:
@@ -62,6 +65,7 @@ services:
       - "7003:7003"
     environment:
       PORT: "7003"
+      PYTHONUNBUFFERED: "1"
       MODEL_PATH: "models/investment-guidelines-mlp.joblib"
     volumes:
       - ../../models:/app/models:ro,z

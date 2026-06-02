@@ -1,4 +1,4 @@
-"""Deterministic portfolio pipeline (agents-on-a-leash flow)."""
+"""Deterministic portfolio pipeline."""
 
 from __future__ import annotations
 
@@ -52,10 +52,11 @@ class ToolRegistry:
 def parse_guidelines(
     registry: ToolRegistry, url_investment_guidelines: str
 ) -> dict[str, Any]:
-    raw = registry.call(
-        "prohibited_symbols",
-        {"url_investment_guidelines": url_investment_guidelines},
-    )
+    if url_investment_guidelines.startswith(("http://", "https://")):
+        args = {"url_investment_guidelines": url_investment_guidelines}
+    else:
+        args = {"client": url_investment_guidelines}
+    raw = registry.call("prohibited_symbols", args)
     if isinstance(raw, dict) and raw.get("error"):
         raise RuntimeError(raw["error"])
     prohibited = raw.get("prohibited_tickers", []) if isinstance(raw, dict) else []
