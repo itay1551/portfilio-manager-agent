@@ -44,5 +44,5 @@ class MarketData:
 
     # Fetch data from Yahoo
     def _fetch_yahoo_data(self, symbol, start, end):
-        data = yf.download(symbol, start=start, end=end)
+        data = yf.download(symbol, start=start, end=end, multi_level_index=False, progress=False)
         return data

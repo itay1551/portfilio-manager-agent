@@ -447,7 +447,8 @@ def fetch_pdf_text(url: str, timeout: int = 30) -> str:
      """
 
     # Get the doc from a remote URL (in chunks if needed)
-    with requests.get(url, stream=True, timeout=timeout) as r:
+    headers = {"User-Agent": "Mozilla/5.0"}
+    with requests.get(url, stream=True, timeout=timeout, headers=headers) as r:
         r.raise_for_status()
         chunks = []
         for chunk in r.iter_content(chunk_size=65536):
@@ -482,7 +483,7 @@ def prohibited_symbols():
     #return ["DUK", "PM", "XOM", "COP","CVX"]
 
     # Get investment guidelines - either locally in DMS or remote URL
-    file_path = "tools/guidelines/docs/client-" + client + "/investment-guidelines.pdf"
+    file_path = "docs/client-" + client + "/investment-guidelines.pdf"
     if os.path.isfile(file_path):
         # Parse document from local DMS (document management system) filestore
         print(f"Investment guidelines found in local DMS store for client {client}")
