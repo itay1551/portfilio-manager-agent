@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: container
-          image: {{ .Values.image.registry }}/orchestrator:{{ .Values.image.tag }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tags.orchestrator }}
           ports:
             - containerPort: 5000
               protocol: TCP

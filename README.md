@@ -1,290 +1,235 @@
-# Neurosymbolic AI
+# Build compliant investment portfolios with AI-powered risk management
 
-Language Models (LMs) offer powerful reasoning and automation capabilities.  This demo presents a practical architectural pattern for agentic AI: a language model working in conjunction with a set of tools (aka agents) in order to solve a real-world financial services use case.
+An AI-powered investment advisor that combines a language model with specialized financial tool agents to automate portfolio construction, compliance checking, and risk analysis. The system parses client investment guidelines, builds compliant portfolios, calculates Value at Risk, and generates client-ready communications — then lets you iterate through agentic chat.
 
-# Use Case
+## Table of contents
 
-Imagine Mary, a portfolio manager for a leading asset management firm. Her new client, a pension fund, wants a portfolio that meets their investment guidelines, meets their risk tolerance, avoids conflicts, and, most importantly, meets their investment targets. Now imagine this multiplied tens and hundreds of times. 
+1. [Detailed description](#detailed-description)
+   - [The Challenge](#the-challenge)
+   - [Our Solution](#our-solution)
+   - [Our Solution Stack](#our-solution-stack)
+   - [Architecture diagrams](#architecture-diagrams)
+2. [Requirements](#requirements)
+   - [Minimum hardware requirements](#minimum-hardware-requirements)
+   - [Minimum software requirements](#minimum-software-requirements)
+   - [Required user permissions](#required-user-permissions)
+3. [Deploy](#deploy)
+   - [Quick Start - OpenShift Deployment](#quick-start---openshift-deployment)
+   - [Quick Start - Local Development](#quick-start---local-development)
+   - [Usage](#usage)
+   - [Delete](#delete)
+4. [References](#references)
+5. [Tags](#tags)
 
-The intuitive answer to this challenge is … AI to the rescue. For this to be true, it is necessary to combine the power of LMs and neural networks, providing natural language, reasoning and prediction capabilities, with methods based on logical reasoning and knowledge, such as quantitative analysis and rules-based systems. 
+## Detailed description
 
-This demo will focus will be on a realistic example: an AI-supported portfolio manager that combines neural networks with symbolic AI into a single, coherent, multi-agent system.
+### The Challenge
 
-# Architecture
+Portfolio managers at asset management firms must build investment portfolios that satisfy each client's unique guidelines, meet risk tolerances, avoid prohibited securities, and hit return targets. Now multiply that across tens or hundreds of clients. The manual process — reading guideline documents, cross-referencing prohibited tickers, running risk calculations, and drafting client communications — is slow, error-prone, and does not scale.
 
-* UI
-* Orchestrator
-* Investment Guidelines agent
-* Portfolio Generator agent
-* Value at Risk (VaR) calculator agent
-* [Red Hat OpenShift](https://www.redhat.com/en/technologies/cloud-computing/openshift) (or [Podman](https://podman-desktop.io/)) to host the orchestrator, agents and language model
-* Language model (LM)
+### Our Solution
 
-# Project prequisites
+An AI multi-agent system that automates the end-to-end portfolio construction workflow in two phases:
 
-* A container runtime environment.  For development, a good option is [Podman Desktop](https://podman-desktop.io/).  For production workloads, [Red Hat OpenShift](https://www.redhat.com/en/technologies/cloud-computing/openshift) faciliates running AI inference on GPUs and CPUs, AI training, tools and agentic workflows in a hybrid cloud environment.
-* A language model (LM) that is available via an OpenAI-compliant API.  This demo has been tested with a [quantized Llama 3.3 (70B) model](https://huggingface.co/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8).
+**Phase 1 — Deterministic Pipeline:**
+- Parses client investment guideline PDFs and extracts prohibited ticker symbols using an MLP classifier
+- Builds a compliant equal-weight equity portfolio from the S&P 100, excluding prohibited securities
+- Calculates 1-day parametric Value at Risk (VaR) at 99% confidence
+- Automatically retries portfolio construction if VaR exceeds the client's risk threshold (up to 10 attempts)
+- Drafts a client-ready summary email via the LLM
 
-# Configuration
+**Phase 2 — Agentic Chat:**
+- Interactive chat where the LLM can call portfolio and VaR tools to modify holdings and recalculate risk
+- Prohibited tickers from Phase 1 persist — the advisor cannot violate compliance constraints
+- VaR is automatically recalculated after every portfolio change
 
-The React UI can pre-fill connection settings from a `.env` file in the project root (values are baked in at container build time via `VITE_*` build args).
+### Our Solution Stack
+
+#### AI/ML
+* LLM — powers email drafting, agentic chat reasoning, and tool selection (served via RHOAI model serving or any OpenAI-compatible endpoint). Tested with [Llama 3.3 70B quantized](https://huggingface.co/RedHatAI/Llama-3.3-70B-Instruct-quantized.w8a8).
+* scikit-learn MLP — classifies guideline sentences as prohibition-related to extract banned tickers.
+
+#### Backend Services
+* Flask — REST API orchestrator + 3 specialized tool agents.
+* OpenAI Python SDK — LLM function calling for agentic chat.
+* yfinance — real-time market data for portfolio pricing and VaR calculation.
+
+#### Frontend
+* React + Vite + TypeScript — two-tab UI for pipeline execution and portfolio chat.
+
+#### Infrastructure
+* Podman/Docker Compose — local development.
+* Red Hat OpenShift + Helm — production deployment.
+* Optional: Knative — serverless agent auto-scaling.
+
+### Architecture diagrams
+
+#### Phase 1: Deterministic Pipeline
+
+The UI calls granular orchestrator endpoints in sequence, reimplementing the retry loop client-side for real-time progress feedback.
+
+```mermaid
+flowchart TD
+  Start["User submits pipeline request"] --> G["1. Parse Guidelines PDF"]
+  G -->|"prohibited tickers"| P["2. Build Portfolio"]
+  P -->|"holdings"| V["3. Calculate VaR"]
+  V --> Check{"VaR > max?"}
+  Check -->|"Yes, up to 10x"| P
+  Check -->|"No"| E["4. Draft Client Email via LLM"]
+  E --> Done["Return results"]
+```
+
+#### Phase 2: Agentic Chat
+
+The LLM selects from `portfolio_equities`, `portfolio_replace_symbol`, and `value_at_risk` tools. Guidelines are frozen — prohibited tickers cannot be overridden. VaR is recalculated automatically after every portfolio mutation.
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant UI
+  participant Orchestrator
+  participant LLM
+  participant Tools as Portfolio/VaR Agents
+
+  User->>UI: Chat message
+  UI->>Orchestrator: POST /chat with message + context
+  Orchestrator->>LLM: System prompt + tools
+  LLM-->>Orchestrator: Tool call
+  Orchestrator->>Tools: POST /tools/tool_name
+  Tools-->>Orchestrator: Result
+  Orchestrator->>LLM: Tool result
+  LLM-->>Orchestrator: Final response
+  Orchestrator-->>UI: Response + updated context
+  UI-->>User: Display answer + refreshed portfolio outputs
+```
+
+## Requirements
+
+NOTE: This quickstart assumes a large language model is already deployed in your environment. Guidance for deploying models is available in the [References](#references) section.
+
+### Minimum hardware requirements
+
+CPU: 2+ cores
+Memory: 4Gi
+Storage: 10Gi
+- **Optional:** GPU — required only if you plan to deploy your own model on OpenShift AI, for deployment refer to [References](#references).
+
+### Minimum software requirements
+
+#### OpenShift Cluster Deployment
+- **Red Hat OpenShift AI** 2.25.0 or later (for model serving)
+- **Helm** 3.0.0 or later
+- **oc CLI** (for OpenShift)
+- **LLM Model Server** — Red Hat OpenShift AI model serving (vLLM) recommended, or any OpenAI-compatible endpoint.
+
+#### Local Development Requirements
+- Podman and Podman Compose (or Docker and Docker Compose)
+- Make (for running deployment commands)
+
+### Required user permissions
+
+#### Local Development
+
+- Permission to run containers via Podman or Docker
+- Access to local ports: `5000`, `7001`, `7002`, `7003`, `8080`
+
+#### OpenShift Cluster Deployment
+
+- Authenticated to the OpenShift cluster (`oc login`)
+- Permission to create or access a namespace/project
+
+## Deploy
+
+### Quick Start - OpenShift Deployment
+
+For production deployment on OpenShift clusters:
+
+```bash
+make deploy-cluster
+# or: helm upgrade --install investment-advisor-agent deploy/helm -n investment-advisor-agent --create-namespace
+```
+
+To deploy with serverless (Knative) agents:
+
+```bash
+helm upgrade --install investment-advisor-agent deploy/helm \
+  -n investment-advisor-agent --create-namespace \
+  --set serverless.enabled=true
+```
+
+### Quick Start - Local Development
+
+#### 1. Clone and Setup Repository
+
+```bash
+git clone https://github.com/rh-ai-quickstart/investment-advisor-agent.git
+cd investment-advisor-agent
+```
+
+#### 2. Configure Environment Variables
 
 ```bash
 cp .env.example .env
-# Edit .env with your LLM endpoint, API key, and model
 ```
 
-| Variable | UI field | Description |
-| --- | --- | --- |
-| `OPENAI_API_ENDPOINT` | LLM URL | OpenAI-compatible base URL (e.g. `https://host/v1`) |
-| `OPENAI_API_TOKEN` | API Key | API key for the LLM endpoint |
-| `OPENAI_MODEL` | Model | Model name string |
-| `ORCHESTRATOR_URL` | Orchestrator URL | Optional. Baked as `VITE_ORCHESTRATOR_URL` at UI build. Defaults to `http://localhost:5000/chat` locally, or `http://orchestrator:5000/chat` in Compose |
-
-Alternative variable names are also supported: `LLM_URL`, `OPENAI_API_BASE`, `OPENAI_API_KEY`, `API_KEY`, `LLM_MODEL`, and `MODEL`.
-
-Do not commit `.env` — it is listed in `.gitignore`. Use `.env.example` as the template.
-
-# Build the solution (optional)
-
-The containers needed to run the demo are available online.  However, if you would prefer to build from source:
-
-```
-git clone https://github.com/aric-rosenbaum/neurosymbolic-ai.git
-cd neurosymbolic-ai
-``` 
-
-Create a virtual environment and activate it:
-```
-python3 -m venv .env
-source .env/bin/activate
+Edit `.env` with your LLM configuration:
+```bash
+OPENAI_API_ENDPOINT=https://your-llm-host/v1   # OpenAI-compatible endpoint (include /v1)
+OPENAI_API_TOKEN=sk-your-api-key                # API key for the endpoint
+OPENAI_MODEL=llama-3-3-70b-instruct-w8a8        # Model name
 ```
 
-In the build directory, grant execute permssions to the build and deploy scripts:
-```
-chmod +x build/build_script.sh
-chmod +x build/deploy_podman.sh
-```
+> **Tip:** For enterprise deployments, we recommend using [Red Hat OpenShift AI model serving](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.0/html/deploying_models/deploying_models) to host your LLM with built-in GPU support, autoscaling, and enterprise security.
 
-To build the application:
-```
-./build/build_script.sh
-```
-
-# Deployment: Podman Compose
-
-From the project root, configure the UI (optional) and start all services:
+#### 3. Start All Services
 
 ```bash
-cp .env.example .env   # optional — pre-fills LLM settings in the UI
 make deploy-local
-# or: podman compose -f deploy/local/compose.yml up -d --build
+# equivalent to: podman compose -f deploy/local/compose.yml up -d --build
 ```
 
 | Service | URL |
 | --- | --- |
 | UI | http://localhost:8080 |
-| Orchestrator | http://localhost:5000 |
+| Orchestrator API | http://localhost:5000 |
 
-Open the UI at http://localhost:8080, expand **Connection settings** to set the LLM endpoint, API key, and model, then use the two-phase workflow below.
+### Usage
 
-# Two-phase UI (agents-on-a-leash pipeline)
+Open the UI at **http://localhost:8080** (or the OpenShift route).
 
-The UI mirrors the deterministic [agents-on-a-leash](https://github.com/aric-rosenbaum/agents-on-a-leash) flow without Fluxnova BPM.
+If you created a `.env` file, the LLM endpoint, API key, and model are loaded automatically. Otherwise, expand **Connection settings** to enter them manually.
 
-## Tab 1 — Build portfolio
+**Tab 1 — Portfolio Setup:**
 
-1. Set **Investment guidelines URL**, **Portfolio value**, **Number of symbols**, and **Max VaR**.
-2. Click **Run pipeline**. A progress log shows each step:
-   - Parse guidelines (prohibited tickers)
-   - Build portfolio (retries if VaR exceeds max)
-   - Calculate VaR
-   - Generate draft client email (LLM)
-3. Results appear in the **Results** accordion. On success, **Discuss portfolio** unlocks.
+1. Set the **Investment guidelines URL**, **Portfolio value**, **Number of symbols**, and **Max VaR**.
+2. Click **Run pipeline**. A live progress log shows each step: guidelines parsing, portfolio construction (with VaR retry loop), and email drafting.
+3. On success, results appear in **Portfolio outputs** and the chat tab unlocks.
 
-## Tab 2 — Discuss portfolio
+**Tab 2 — Discuss Portfolio:**
 
-- Review live **Portfolio outputs** (prohibited tickers, holdings, VaR, draft email).
-- Chat about the portfolio; the orchestrator can call **portfolio** and **VaR** tools to mutate holdings and risk.
-- Outputs refresh after each response when the context changes.
-- Ask explicitly to **regenerate the draft email** if needed (not automatic on portfolio changes).
+- Chat about the portfolio — the LLM can call tools to swap holdings, rebuild the portfolio, or recalculate VaR.
+- Portfolio outputs refresh automatically when the context changes.
 
-# Orchestrator API
+### Delete
 
-| Endpoint | Method | Purpose |
-| --- | --- | --- |
-| `/pipeline` | POST | Run full pipeline in one request |
-| `/pipeline/guidelines` | POST | Parse investment guidelines PDF URL |
-| `/pipeline/portfolio` | POST | Build equities portfolio |
-| `/pipeline/var` | POST | Calculate value at risk |
-| `/pipeline/email` | POST | Generate draft client email |
-| `/chat` | POST | Phase 2 chat with `context` + `history`; legacy agentic chat without `context` |
-
-### `POST /pipeline` body
-
-```json
-{
-  "url_investment_guidelines": "https://…/guidelines.pdf",
-  "portfolio_value": 1000000,
-  "qty_symbols": 5,
-  "max_var": 35000,
-  "config": {
-    "llmUrl": "https://your-llm/v1",
-    "apiKey": "sk-…",
-    "model": "your-model"
-  }
-}
-```
-
-### `POST /chat` with portfolio context (Phase 2)
-
-```json
-{
-  "message": "What is the VaR in plain language?",
-  "history": [{"role": "user", "content": "…"}, {"role": "assistant", "content": "…"}],
-  "context": { "prohibited_tickers": [], "portfolio": [], "valueAtRisk": 0, "draft_email": "…" },
-  "config": { "llmUrl": "…", "apiKey": "…", "model": "…" }
-}
-```
-
-Response includes `content` and updated `context`.
-
-# Deployment: Podman (individual containers)
-
-To faciliate communication between the Orchestrator and the agents, first create a Podman network:
-```
-podman network create neurosymbolic-ai
-```
-
-Now, launch the containers:
-```
-podman run -d -p 5000:5000 --name orchestrator --network neurosymbolic-ai quay.io/aric-rosenbaum/neurosymbolic-ai/orchestrator:latest
-podman run -d -p 7001:7001 --name neurosymbolic-ai-risk --network neurosymbolic-ai quay.io/aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-risk:latest
-podman run -d -p 7002:7002 --name neurosymbolic-ai-portfolio --network neurosymbolic-ai quay.io/aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-portfolio:latest
-podman run -d -p 7003:7003 --name neurosymbolic-ai-guidelines --network neurosymbolic-ai quay.io/aric-rosenbaum/neurosymbolic-ai/neurosymbolic-ai-guidelines:latest
-```
-
-# Deployment: OpenShift (Helm)
-
-The `deploy/helm/` directory is a Helm chart. Install with defaults (always-on agents):
+#### Stop Local Deployment
 
 ```bash
-make deploy-cluster
-# or: helm upgrade --install neurosymbolic-ai deploy/helm -n neurosymbolic-ai --create-namespace
+podman compose -f deploy/local/compose.yml down
 ```
 
-To deploy with serverless (Knative) agents instead:
-
-```bash
-helm upgrade --install neurosymbolic-ai deploy/helm \
-  -n neurosymbolic-ai --create-namespace \
-  --set serverless.enabled=true
-```
-
-Override the image registry or tag:
+#### Delete from OpenShift
 
 ```bash
-helm upgrade --install neurosymbolic-ai deploy/helm \
-  -n neurosymbolic-ai --create-namespace \
-  --set image.registry=ghcr.io/your-org \
-  --set image.tag=v1.2.3
+helm uninstall investment-advisor-agent -n investment-advisor-agent
 ```
 
-See `deploy/helm/values.yaml` for all configurable values.
+## References
 
-### Grant access to private container images (skip if images are public)
-If the container images are private, you need to create a secret and grant access to the project.  Here's an example of how to do this with GHCR:
-```
-# Create secret
-oc create secret docker-registry ghcr-creds \
-  --docker-server=ghcr.io \
-  --docker-username=<github-username> \
-  --docker-password=<github-token> \
-  --docker-email=<github-email-address> \
-  -n neurosymbolic-ai
+- [How to deploy language models with Red Hat OpenShift AI](https://developers.redhat.com/articles/2025/09/10/how-deploy-language-models-red-hat-openshift-ai)
 
-# Grant secret to project
-oc secrets link default ghcr-creds --for=pull -n neurosymbolic-ai
-```
+## Tags
 
-# Run It
-
-<b>UI:</b> Launch the UI at http://localhost:8080 when using Podman Compose, or the route URL when deployed on OpenShift (for example `http://ui-neurosymbolic-ai.apps-crc.testing/`).
-
-<b>Config the UI:</b> If you created a `.env` file from `.env.example`, the orchestrator URL, LLM endpoint, API key, and model are loaded automatically. Expand **Connection settings** to review or override them. Otherwise, enter the LLM endpoint, API key, and model manually.
-
-<b>Example 1:</b> Enter a simple prompt that doesn't require any tools: 
-```
-What is the capital of France?
-```
-Output:
-```
-The capital of France is Paris.
-```
-
-<b>Example 2:</b> Calculate the value at risk of a portfolio: 
-```
-Calculate the 1-day value at risk (VaR) of the following portfolio at a 0.99 confidence: 100 shares of IBM, 100 shares of NVDA and 50 shares of AAPL.  Report the result in a client friendly manner.
-```
-Output:
-```
-The 1-day value at risk (VaR) of the portfolio at a 0.99 confidence is $2339.55. This means that there is a 1% chance that the portfolio will lose more than $2339.55 in a single day.
-```
-
-<b>Example 3:</b> Build a $1,000,000 portoflio: 
-```
-Build an equities portfolio with 5 ticker symbols and a total value of $1 million.  For the portfolio, report back each ticker symbol, name of the company, number of shares, and last price.
-```
-Output:
-```
-The portfolio consists of the following ticker symbols, company names, number of shares, and last prices:
-- JNJ, Johnson & Johnson, 1035, $193.22
-- USB, U.S. Bancorp, 4377, $45.69
-- BMY, Bristol Myers Squibb Company, 4584, $43.63
-- TXN, Texas Instruments Incorporated, 1132, $176.58
-- USB, U.S. Bancorp, 4377, $45.69
-```
-
-<b>Example 4:</b> Parse an investment guideline: 
-```
-I have a new client and have uploaded their investment guidelines to the following URL: https://d15bgksgja6rr0.cloudfront.net/Neurosymbolic-Inc-Investment-Guidelines.pdf.  What ticker symbols are prohibited per their guidelines?
-```
-Output:
-```
-The prohibited ticker symbols per the client's guidelines are CVX, TGT, WMT, and XOM.
-```
-
-<b>Example 5:</b> Muti-tool example: 
-```
-- I have a new client and have uploaded their investment guidelines to the following URL: https://d15bgksgja6rr0.cloudfront.net/Neurosymbolic-Inc-Investment-Guidelines.pdf.
-- Build an equities portfolio with 5 ticker symbols and a total value of $1 million.  Exclude the ticker symbols you just calculated.  For the portfolio, report back each ticker symbol, name of the company, number of shares, and last price.
-- Also tell me the 1-day value at risk (VaR) of the portfolio at a 0.99 confidence.
-```
-Output:
-```
-The prohibited ticker symbols for the new client are CVX, TGT, WMT, and XOM.
-
-The equities portfolio with 5 ticker symbols and a total value of $1 million, excluding the prohibited symbols, is:
-
-| Ticker Symbol | Company Name | Number of Shares | Last Price |
-| --- | --- | --- | --- |
-| ISRG | Intuitive Surgical, Inc. | 448 | 446.13 |
-| BKNG | Booking Holdings Inc. | 39 | 5070.02 |
-| HD | The Home Depot, Inc. | 510 | 391.9 |
-| ADBE | Adobe Inc. | 600 | 333.26 |
-| CHTR | Charter Communications, Inc. | 790 | 253.16 |
-
-The 1-day value at risk (VaR) of the portfolio at a 0.99 confidence is $32,871.91.
-```
-
-## Trouble shooting
-
-### Podman: Stuck in "Starting"
-If Podman is stuck in "Starting" for Podman Desktop, try issuing the following in the Terminal: "podman machine start"
-
-### "Requested resource" error when executing "ksvc-risk.yaml"
-Serverless requires the "Red Hat OpenShift Serverless" Operator to be installed.  In the OpenShift UI, check if "Red Hat OpenShift Serverless" in installed in "Installed Operators."  
-
-If it is not installed, search for "serverless" in the "Software Catalog" and install it.  Once installed, click "Red Hat OpenShift Serverless" in "Installed Operators" and click "Create instance" under "Knative Serving" in the "knative-serving" project.  
-
-Alternatively, run the traditional, always-on containers.
+* Industry: Financial Services
+* Product: Red Hat OpenShift AI
+* Contributor org: Red Hat

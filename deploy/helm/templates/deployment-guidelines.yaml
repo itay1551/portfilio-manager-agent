@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: neurosymbolic-ai-guidelines
+  name: investment-advisor-agent-guidelines
   namespace: {{ .Values.namespace }}
 spec:
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
-      app: neurosymbolic-ai-guidelines
+      app: investment-advisor-agent-guidelines
   template:
     metadata:
       labels:
-        app: neurosymbolic-ai-guidelines
+        app: investment-advisor-agent-guidelines
     spec:
       containers:
         - name: container
-          image: {{ .Values.image.registry }}/neurosymbolic-ai-guidelines:{{ .Values.image.tag }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tags.guidelines }}
           ports:
             - containerPort: 7003
               protocol: TCP

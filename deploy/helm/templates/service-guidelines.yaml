@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: neurosymbolic-ai-guidelines
+  name: investment-advisor-agent-guidelines
   namespace: {{ .Values.namespace }}
 spec:
   selector:
-    app: neurosymbolic-ai-guidelines
+    app: investment-advisor-agent-guidelines
   ports:
     - name: http
       protocol: TCP

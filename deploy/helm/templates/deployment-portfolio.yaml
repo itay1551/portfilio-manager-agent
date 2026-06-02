@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: neurosymbolic-ai-portfolio
+  name: investment-advisor-agent-portfolio
   namespace: {{ .Values.namespace }}
 spec:
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
-      app: neurosymbolic-ai-portfolio
+      app: investment-advisor-agent-portfolio
   template:
     metadata:
       labels:
-        app: neurosymbolic-ai-portfolio
+        app: investment-advisor-agent-portfolio
     spec:
       containers:
         - name: container
-          image: {{ .Values.image.registry }}/neurosymbolic-ai-portfolio:{{ .Values.image.tag }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tags.portfolio }}
           ports:
             - containerPort: 7002
               protocol: TCP

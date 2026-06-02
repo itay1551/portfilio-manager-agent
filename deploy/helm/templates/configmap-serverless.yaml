@@ -5,7 +5,7 @@ metadata:
   name: agent-endpoints
   namespace: {{ .Values.namespace }}
 data:
-  GUIDELINES_URL: "http://neuro-ai-guidelines:7003"
-  PORTFOLIO_URL: "http://agentic-ai-portfolio-{{ .Values.namespace }}.apps-crc.testing"
-  RISK_URL: "http://agentic-ai-risk-{{ .Values.namespace }}.apps-crc.testing"
+  GUIDELINES_URL: "http://investment-advisor-agent-guidelines:7003"
+  PORTFOLIO_URL: "http://investment-advisor-agent-portfolio-{{ .Values.namespace }}.apps-crc.testing"
+  RISK_URL: "http://investment-advisor-agent-risk-{{ .Values.namespace }}.apps-crc.testing"
 {{- end }}

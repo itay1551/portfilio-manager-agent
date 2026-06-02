@@ -2,7 +2,7 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: agentic-ai-portfolio
+  name: investment-advisor-agent-portfolio
   namespace: {{ .Values.namespace }}
 spec:
   template:
@@ -15,7 +15,7 @@ spec:
       timeoutSeconds: {{ .Values.serverless.timeoutSeconds }}
       containers:
         - name: container
-          image: {{ .Values.image.registry }}/agentic-ai-portfolio:{{ .Values.image.tag }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tags.portfolio }}
           ports:
             - containerPort: 7002
               protocol: TCP
