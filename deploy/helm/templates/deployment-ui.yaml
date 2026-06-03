@@ -13,9 +13,18 @@ spec:
       labels:
         app: ui
     spec:
+      volumes:
+        - name: runtime-config
+          secret:
+            secretName: ui-runtime-config
       containers:
         - name: container
           image: {{ .Values.image.repository }}:{{ .Values.image.tags.ui }}
           ports:
             - containerPort: 8080
               protocol: TCP
+          volumeMounts:
+            - name: runtime-config
+              mountPath: /usr/share/nginx/html/runtime-config.js
+              subPath: runtime-config.js
+              readOnly: true
