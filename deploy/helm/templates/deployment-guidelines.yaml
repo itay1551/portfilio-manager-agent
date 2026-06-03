@@ -13,9 +13,25 @@ spec:
       labels:
         app: investment-advisor-agent-guidelines
     spec:
+      volumes:
+        - name: guidelines-docs
+          secret:
+            secretName: guidelines-docs
       containers:
         - name: container
           image: {{ .Values.image.repository }}:{{ .Values.image.tags.guidelines }}
           ports:
             - containerPort: 7003
               protocol: TCP
+          env:
+            - name: PORT
+              value: "7003"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: MODEL_PATH
+              value: "models/investment-guidelines-mlp.joblib"
+          volumeMounts:
+            - name: guidelines-docs
+              mountPath: /app/docs/client-100/investment-guidelines.pdf
+              subPath: investment-guidelines.pdf
+              readOnly: true

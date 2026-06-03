@@ -1,7 +1,0 @@
-apiVersion: project.openshift.io/v1
-kind: Project
-metadata:
-  name: {{ .Values.namespace }}
-spec:
-  displayName: "Investment Advisor Agent"
-  description: "Building Better AI Solutions in Financial Services"

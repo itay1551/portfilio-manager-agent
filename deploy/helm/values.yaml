@@ -8,6 +8,12 @@ image:
     portfolio: portfolio
     guidelines: guidelines
 replicas: 1
+ui:
+  orchestratorUrl: ""
+  llm:
+    endpoint: ""
+    apiToken: ""
+    model: ""
 serverless:
   enabled: false
   minScale: "0"

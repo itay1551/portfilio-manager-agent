@@ -19,3 +19,8 @@ spec:
           ports:
             - containerPort: 7002
               protocol: TCP
+          env:
+            - name: PORT
+              value: "7002"
+            - name: PYTHONUNBUFFERED
+              value: "1"

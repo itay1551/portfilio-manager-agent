@@ -19,3 +19,10 @@ spec:
           ports:
             - containerPort: 5000
               protocol: TCP
+          env:
+            - name: PORT
+              value: "5000"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: TOOL_SERVERS
+              value: "http://investment-advisor-agent-risk:7001,http://investment-advisor-agent-portfolio:7002,http://investment-advisor-agent-guidelines:7003"
