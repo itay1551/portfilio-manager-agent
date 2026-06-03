@@ -10,6 +10,7 @@ from .conftest import ROOT, load_llm_config
 
 
 @pytest.mark.integration
+@pytest.mark.local_only
 def test_ui_assets_contain_llm_host():
     config = load_llm_config()
     if not config.llm_url:

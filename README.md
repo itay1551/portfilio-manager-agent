@@ -146,8 +146,9 @@ For production deployment on OpenShift clusters:
 
 ```bash
 make deploy-cluster
-# or: helm upgrade --install investment-advisor-agent deploy/helm -n investment-advisor-agent --create-namespace
 ```
+
+This reads your `.env` file (if present) and passes any non-empty `OPENAI_*` values to Helm, so the UI starts with LLM connection settings pre-filled.
 
 To deploy with serverless (Knative) agents:
 

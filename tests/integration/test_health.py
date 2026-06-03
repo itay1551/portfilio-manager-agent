@@ -29,6 +29,7 @@ def test_ui_api_health_proxy(http_client: httpx.Client):
 
 
 @pytest.mark.integration
+@pytest.mark.local_only
 @pytest.mark.parametrize("port", TOOL_PORTS)
 def test_tool_agents_expose_tools(http_client: httpx.Client, port: int):
     response = http_client.get(f"http://localhost:{port}/tools")
