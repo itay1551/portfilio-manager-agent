@@ -2,11 +2,12 @@ import { useCallback, useState } from "react";
 import type { ConnectionSettings } from "../api/types";
 
 function envDefault(keys: string[], fallback = ""): string {
+  const rc = window.__RUNTIME_CONFIG__;
   for (const key of keys) {
+    const rv = rc?.[key];
+    if (typeof rv === "string" && rv.trim()) return rv.trim();
     const value = import.meta.env[key as keyof ImportMetaEnv];
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
+    if (typeof value === "string" && value.trim()) return value.trim();
   }
   return fallback;
 }
