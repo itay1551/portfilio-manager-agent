@@ -62,8 +62,9 @@ def assert_stack_ready() -> None:
         ("UI static", f"{UI_BASE}/"),
         ("UI api health", f"{UI_API_BASE}/health"),
     ]
-    for port in TOOL_PORTS:
-        probes.append((f"tool {port}", f"http://localhost:{port}/tools"))
+    if "localhost" in UI_BASE:
+        for port in TOOL_PORTS:
+            probes.append((f"tool {port}", f"http://localhost:{port}/tools"))
 
     with httpx.Client(timeout=10.0) as client:
         for label, url in probes:
