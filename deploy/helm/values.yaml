@@ -21,6 +21,8 @@ serverless:
   maxScale: "5"
   concurrency: 10
   timeoutSeconds: 60
+guardrails:
+  enabled: true
 minio:
   rootUser: minioadmin
   rootPassword: minioadmin
