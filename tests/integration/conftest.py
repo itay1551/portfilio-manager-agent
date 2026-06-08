@@ -22,6 +22,7 @@ HTTP_TIMEOUT = float(os.getenv("CURL_MAX_TIME", "60"))
 UI_BASE = os.getenv("UI_BASE", "http://localhost:8080").rstrip("/")
 ORCH_BASE = os.getenv("ORCH_BASE", "http://localhost:5000").rstrip("/")
 UI_API_BASE = f"{UI_BASE}/api"
+GUARDRAILS_BASE = os.getenv("GUARDRAILS_BASE", "http://localhost:8000").rstrip("/")
 TOOL_PORTS = (7001, 7002, 7003)
 
 

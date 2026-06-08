@@ -32,6 +32,7 @@ ifndef NAMESPACE
 endif
 	UI_BASE=http://$(shell oc get route ui -n $(NAMESPACE) -o jsonpath='{.spec.host}') \
 	ORCH_BASE=http://$(shell oc get route orchestrator -n $(NAMESPACE) -o jsonpath='{.spec.host}') \
+	GUARDRAILS_BASE=http://$(shell oc get route guardrails -n $(NAMESPACE) -o jsonpath='{.spec.host}' 2>/dev/null) \
 	pytest tests/integration -m "integration and not llm and not local_only" -v
 
 test-cluster-llm:
@@ -40,4 +41,5 @@ ifndef NAMESPACE
 endif
 	UI_BASE=http://$(shell oc get route ui -n $(NAMESPACE) -o jsonpath='{.spec.host}') \
 	ORCH_BASE=http://$(shell oc get route orchestrator -n $(NAMESPACE) -o jsonpath='{.spec.host}') \
+	GUARDRAILS_BASE=http://$(shell oc get route guardrails -n $(NAMESPACE) -o jsonpath='{.spec.host}' 2>/dev/null) \
 	pytest tests/integration -m "integration and not local_only" -v
