@@ -1,7 +1,8 @@
-# Verify Demo Stack — Reference
+# Verify Local Deployment — Reference
 
-**Primary:** `./.cursor/skills/verify-demo-stack/scripts/verify_demo_stack.sh`  
-**UI proxy only:** `./.cursor/skills/verify-demo-stack/scripts/verify_ui_api_proxy.sh`  
+**Primary:** `./.cursor/skills/verify-local/scripts/verify_demo_stack.sh`  
+**UI proxy only:** `./.cursor/skills/verify-local/scripts/verify_ui_api_proxy.sh`  
+**Browser UI:** [browser-mcp.md](../browser-mcp.md) (chrome-devtools MCP, after scripts PASS)  
 **Manual fallback:** [workflow.md](workflow.md)
 
 ## Service map (Podman Compose)
@@ -32,7 +33,7 @@ The UI defaults to **Orchestrator URL** `/api/chat`. Nginx strips `/api` and for
 Run the dedicated check:
 
 ```bash
-./.cursor/skills/verify-demo-stack/scripts/verify_ui_api_proxy.sh
+./.cursor/skills/verify-local/scripts/verify_ui_api_proxy.sh
 ```
 
 Success: script prints `PASS: UI /api proxy verification` with guidelines, portfolio, var, and LLM host in built JS.

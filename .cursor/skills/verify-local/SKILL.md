@@ -1,16 +1,22 @@
 ---
-name: verify
-description: Verify the pipeline and frontend unit tests. Use after every code change of orchestrator/src/, tools/, frontend/, or deploy/local/compose.yml.
+name: verify-local
+description: Local deployment verification via Podman Compose. Runs frontend unit tests, redeploys the stack, checks pipeline + UI proxy, then verifies the UI in Chrome via chrome-devtools MCP. Use after code changes to orchestrator/src/, tools/, frontend/, or deploy/local/compose.yml — not for OpenShift/cluster.
 ---
 
-# Verify Demo Stack
+# Verify Local Deployment (Podman Compose)
+
+## Flow
+
+1. **Scripts first** — `verify_demo_stack.sh` (API + logs).
+2. **Browser MCP second** — chrome-devtools MCP at `http://localhost:8080` ([browser-mcp.md](../browser-mcp.md)).
+3. Skip browser with `SKIP_BROWSER_MCP=1`.
 
 ## Default (always try first)
 
 From project root:
 
 ```bash
-./.cursor/skills/verify-demo-stack/scripts/verify_demo_stack.sh
+./.cursor/skills/verify-local/scripts/verify_demo_stack.sh
 ```
 
 Same stack as local dev:
@@ -24,7 +30,7 @@ make deploy-local   # podman compose --env-file .env -f deploy/local/compose.yml
 When the UI shows **Prohibited tickers — Failed.**, **Set LLM URL…**, or requests hang on `:8080`:
 
 ```bash
-./.cursor/skills/verify-demo-stack/scripts/verify_ui_api_proxy.sh
+./.cursor/skills/verify-local/scripts/verify_ui_api_proxy.sh
 ```
 
 ---
@@ -44,6 +50,7 @@ When the UI shows **Prohibited tickers — Failed.**, **Set LLM URL…**, or req
 | 8 | Full pipeline | `POST :5000/pipeline` — positions, VaR ≤ max, email, no prohibited overlap |
 | 9 | Phase 2 chat | Reject first holding — `portfolio_replace_symbol`, updated VaR |
 | 10 | Logs | No tracebacks / connection errors (current container session) |
+| 11 | Browser UI (MCP) | chrome-devtools — pipeline + chat at `http://localhost:8080` ([browser-mcp.md](../browser-mcp.md)) |
 
 Default guidelines input: client **`100`** (local PDF at `docs/client-100/`). CloudFront sample URLs often return **403**.
 
@@ -61,8 +68,9 @@ Default guidelines input: client **`100`** (local PDF at `docs/client-100/`). Cl
 7. `POST /chat` — reject first holding (skip with `SKIP_CHAT=1`)
 8. Scans logs for tracebacks and tool errors
 9. Prints `PASS` summary or exits non-zero
+10. **Browser MCP** — after script exit `0`, run [browser-mcp.md](../browser-mcp.md) against `http://localhost:8080` (skip with `SKIP_BROWSER_MCP=1`)
 
-**Requires:** `podman`, `curl`, `jq`.
+**Requires:** `podman`, `curl`, `jq`. Browser step requires **chrome-devtools** MCP (`.cursor/mcp.json`, gitignored).
 
 ## What `verify_ui_api_proxy.sh` does
 
@@ -76,13 +84,25 @@ Default guidelines input: client **`100`** (local PDF at `docs/client-100/`). Cl
 
 ---
 
+## Browser MCP (after scripts PASS)
+
+Use **chrome-devtools** MCP. Full checklist: **[browser-mcp.md](../browser-mcp.md)**.
+
+1. Navigate to `http://localhost:8080` (or `$UI_BASE`).
+2. Check Connection settings, console errors.
+3. Run pipeline with guidelines client **`100`** → **Pipeline complete**.
+4. Chat: reject first holding → one symbol swapped, VaR updated.
+5. Screenshot on failure; include **Browser MCP** section in report.
+
+If scripts PASS but MCP fails, run `verify_ui_api_proxy.sh` to isolate nginx/API vs React UI.
+
 ## On script failure
 
 1. Read the `FAIL:` line and log excerpt from the script output.
 2. For UI issues, run `verify_ui_api_proxy.sh` first.
-3. Open **[workflow.md](workflow.md)** for manual steps at http://localhost:8080
+3. If API ok but UI broken, use **chrome-devtools** MCP or **[workflow.md](workflow.md)** manual fallback.
 4. Use **[reference.md](reference.md)** for per-endpoint curls
-5. Re-run until exit `0`
+5. Re-run until exit `0`, then run browser MCP unless `SKIP_BROWSER_MCP=1`
 
 ## Optional env vars
 
@@ -92,6 +112,7 @@ Default guidelines input: client **`100`** (local PDF at `docs/client-100/`). Cl
 | `SKIP_COMPOSE=1` | off | Do not run compose up |
 | `SKIP_UI_PROXY=1` | off | Skip `verify_ui_api_proxy.sh` |
 | `SKIP_CHAT=1` | off | Skip Phase 2 chat |
+| `SKIP_BROWSER_MCP=1` | off | Skip chrome-devtools UI verification |
 | `COMPOSE_WAIT_SEC` | 120 | Max wait for healthy stack |
 | `CURL_MAX_TIME` | 60 | Per-request timeout (UI proxy script) |
 | `LOG_TAIL` | 300 | Log lines to scan |
@@ -105,14 +126,15 @@ Default guidelines input: client **`100`** (local PDF at `docs/client-100/`). Cl
 ## Report (after PASS)
 
 ```markdown
-## Demo stack verification
+## Local deployment verification
 
 **Status:** PASS
-**Method:** verify_demo_stack.sh (+ verify_ui_api_proxy.sh)
+**Method:** verify_demo_stack.sh (+ verify_ui_api_proxy.sh + chrome-devtools MCP)
 **UI proxy:** health ok; guidelines/portfolio/var via :8080/api; direct vs nginx match
 **UI build:** LLM host baked from .env
 **Pipeline:** [prohibited, positions, VaR, email preview]
 **Chat:** [rejected symbol, kept N/5, chat VaR]
+**Browser MCP:** PASS — pipeline complete; chat swap ok; console clean
 **Logs:** clean
 **Blockers:** none
 ```

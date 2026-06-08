@@ -200,7 +200,7 @@ make test-integration          # no LLM — health, proxy, granular pipeline, to
 make test-integration-llm      # includes full /pipeline and /chat (needs real .env)
 ```
 
-Integration tests mirror [`.cursor/skills/verify-demo-stack/scripts/verify_ui_api_proxy.sh`](.cursor/skills/verify-demo-stack/scripts/verify_ui_api_proxy.sh) and [`verify_demo_stack.sh`](.cursor/skills/verify-demo-stack/scripts/verify_demo_stack.sh). They are **not** run in CI.
+Integration tests mirror [`.cursor/skills/verify-local/scripts/verify_ui_api_proxy.sh`](.cursor/skills/verify-local/scripts/verify_ui_api_proxy.sh) and [`verify_demo_stack.sh`](.cursor/skills/verify-local/scripts/verify_demo_stack.sh). They are **not** run in CI.
 
 ---
 

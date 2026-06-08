@@ -1,12 +1,15 @@
-# Verify Demo Stack — Manual Workflow
+# Verify Local Deployment — Manual Workflow
 
-Use this when `scripts/verify_demo_stack.sh` fails or you need UI-level checks the script does not cover.
+Use this when `scripts/verify_demo_stack.sh` fails, **chrome-devtools MCP is unavailable**, or you need UI-level checks the script does not cover.
+
+**Preferred UI verification:** [browser-mcp.md](../browser-mcp.md) via chrome-devtools MCP (after scripts PASS).
 
 ## Prerequisites
 
 1. Project root (`deploy/local/compose.yml` present).
 2. `.env` with real `OPENAI_API_ENDPOINT`, `OPENAI_API_TOKEN`, `OPENAI_MODEL`.
 3. `podman compose`, `curl`, `jq`.
+4. **chrome-devtools** MCP connected in Cursor (`.cursor/mcp.json`, gitignored).
 
 ## Checklist
 
@@ -16,8 +19,8 @@ Verify demo stack (manual):
 - [ ] 2. Wait for services healthy
 - [ ] 3. Smoke-check HTTP endpoints
 - [ ] 3b. UI /api proxy (verify_ui_api_proxy.sh)
-- [ ] 4. Run pipeline (UI preferred)
-- [ ] 5. Phase 2 chat — reject one holding
+- [ ] 4. Run pipeline (chrome-devtools MCP — see browser-mcp.md)
+- [ ] 5. Phase 2 chat — reject one holding (MCP or manual below)
 - [ ] 6. Read logs for all services
 - [ ] 7. Validate results are logical
 - [ ] 8. Report pass/fail
@@ -44,7 +47,7 @@ All of `ui`, `orchestrator`, `risk`, `portfolio`, `guidelines` must be **running
 ### 3b. UI /api proxy (automated)
 
 ```bash
-./.cursor/skills/verify-demo-stack/scripts/verify_ui_api_proxy.sh
+./.cursor/skills/verify-local/scripts/verify_ui_api_proxy.sh
 ```
 
 Must print `PASS: UI /api proxy verification`. If this fails but `curl http://localhost:5000/health` works, rebuild the UI container (nginx had a stale orchestrator IP).
@@ -58,6 +61,10 @@ curl -sf http://localhost:7003/tools | head -c 200
 ```
 
 ### 4. Run pipeline (UI)
+
+**With MCP (default):** follow [browser-mcp.md](../browser-mcp.md) at `http://localhost:8080`.
+
+**Manual fallback** (MCP unavailable):
 
 1. Open http://localhost:8080
 2. Confirm **Connection settings** (LLM URL, key, model) if `.env` not loaded in container
@@ -73,7 +80,7 @@ curl -sf http://localhost:7003/tools | head -c 200
 Re-run script only for API check:
 
 ```bash
-SKIP_COMPOSE=1 ./.cursor/skills/verify-demo-stack/scripts/verify_demo_stack.sh
+SKIP_COMPOSE=1 ./.cursor/skills/verify-local/scripts/verify_demo_stack.sh
 ```
 
 ### 6. Logs
