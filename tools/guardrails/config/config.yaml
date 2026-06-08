@@ -1,0 +1,27 @@
+rails:
+  config:
+    sensitive_data_detection:
+      input:
+        entities:
+          - CREDIT_CARD
+          - US_SSN
+          - PHONE_NUMBER
+      output:
+        entities:
+          - CREDIT_CARD
+          - US_SSN
+          - PHONE_NUMBER
+    regex_detection:
+      input:
+        patterns:
+          - "\\b(password|secret|api[_-]?key|token)\\b"
+          - "\\d{3}-\\d{2}-\\d{4}"
+        case_insensitive: true
+  input:
+    flows:
+      - detect sensitive data on input
+      - regex check input
+      - check financial topic
+  output:
+    flows:
+      - detect sensitive data on output
