@@ -38,7 +38,7 @@ def test_inferenceservice_ready():
 @pytest.mark.integration
 @pytest.mark.cluster_only
 def test_model_upload_job_completed():
-    """The model-upload Job must have succeeded."""
+    """The model-upload Job must have succeeded (or been TTL-cleaned after success)."""
     result = subprocess.run(
         [
             "oc",
@@ -52,6 +52,25 @@ def test_model_upload_job_completed():
         capture_output=True,
         text=True,
     )
+    if result.returncode != 0 and "NotFound" in result.stderr:
+        isvc = subprocess.run(
+            [
+                "oc",
+                "wait",
+                "--for=condition=Ready",
+                "isvc/guidelines-mlp",
+                "-n",
+                NAMESPACE,
+                "--timeout=10s",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert isvc.returncode == 0, (
+            "model-upload Job not found and InferenceService not Ready — "
+            f"upload likely failed: {isvc.stderr.strip()}"
+        )
+        return
     assert result.stdout.strip() == "1", (
         f"model-upload Job not succeeded: {result.stdout.strip()}"
     )
