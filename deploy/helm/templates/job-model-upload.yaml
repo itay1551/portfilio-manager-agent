@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: model-upload
+  namespace: {{ .Values.namespace }}
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: prepare-model
+          image: {{ .Values.image.repository }}:{{ .Values.image.tags.guidelinesModel }}
+          command:
+            - sh
+            - -c
+            - cp /opt/mlserver/models/guidelines-mlp/* /export/
+          volumeMounts:
+            - name: model-files
+              mountPath: /export
+      containers:
+        - name: upload
+          image: docker.io/minio/mc:latest
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              ls -la /export/
+              for i in $(seq 1 30); do
+                mc alias set minio http://minio:9000 "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" && break
+                echo "Waiting for MinIO... ($i/30)"
+                sleep 2
+              done
+              mc mb --ignore-existing minio/models
+              mc cp --recursive /export/ minio/models/guidelines-mlp/
+              mc ls minio/models/guidelines-mlp/
+              echo "Model uploaded successfully"
+          env:
+            - name: MC_CONFIG_DIR
+              value: /tmp/.mc
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: minio-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+          volumeMounts:
+            - name: model-files
+              mountPath: /export
+      volumes:
+        - name: model-files
+          emptyDir: {}
