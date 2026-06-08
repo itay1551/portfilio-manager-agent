@@ -1,6 +1,6 @@
 -include .env
 
-.PHONY: deploy-local deploy-cluster test-unit test-integration test-integration-llm
+.PHONY: deploy-local deploy-cluster test-unit test-integration test-integration-llm test-cluster test-cluster-llm
 
 deploy-local:
 	podman compose --env-file .env -f deploy/local/compose.yml up --build
