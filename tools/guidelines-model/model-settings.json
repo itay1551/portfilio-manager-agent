@@ -1,0 +1,7 @@
+{
+  "name": "guidelines-mlp",
+  "implementation": "mlserver_sklearn.SKLearnModel",
+  "parameters": {
+    "uri": "./investment-guidelines-mlp.joblib"
+  }
+}

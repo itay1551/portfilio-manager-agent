@@ -21,10 +21,10 @@ test-unit:
 	pytest tests/unit -m unit -v
 
 test-integration:
-	pytest tests/integration -m "integration and not llm" -v
+	pytest tests/integration -m "integration and not llm and not cluster_only" -v
 
 test-integration-llm:
-	pytest tests/integration -m integration -v
+	pytest tests/integration -m "integration and not cluster_only" -v
 
 test-cluster:
 ifndef NAMESPACE

@@ -1,0 +1,30 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: mlserver-sklearn
+  namespace: {{ .Values.namespace }}
+spec:
+  supportedModelFormats:
+    - name: sklearn
+      version: "1"
+      autoSelect: true
+  multiModel: false
+  protocolVersions:
+    - v2
+  containers:
+    - name: kserve-container
+      image: docker.io/seldonio/mlserver:1.7.1-sklearn
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      env:
+        - name: MLSERVER_MODELS_DIR
+          value: /models/_mlserver_models
+        - name: MLSERVER_GRPC_PORT
+          value: "8081"
+        - name: MLSERVER_HTTP_PORT
+          value: "8080"
+        - name: MLSERVER_LOAD_MODELS_AT_STARTUP
+          value: "true"
+        - name: MLSERVER_HOST
+          value: "0.0.0.0"

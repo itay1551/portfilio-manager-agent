@@ -22,3 +22,6 @@ cd ../../..
 cd tools/guidelines/src
 pip freeze >requirements.txt
 podman build -t quay.io/ikatav/portfolio-manager-agent:guidelines .
+
+cd ../../..
+podman build -f tools/guidelines-model/Dockerfile -t quay.io/ikatav/portfolio-manager-agent:guidelines-model .

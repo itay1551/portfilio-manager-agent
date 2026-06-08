@@ -65,6 +65,7 @@ TOOLS = [
 # Config
 # ----------------------------
 MODEL_PATH = os.environ.get("MODEL_PATH", "models/investment-guidelines-mlp.joblib")
+INFERENCE_URL = os.environ.get("INFERENCE_URL", "")
 
 
 # ----------------------------
@@ -546,7 +547,33 @@ def bootstrap_model():
     last_loaded_from = os.path.abspath(MODEL_PATH)
 
 
-bootstrap_model()
+if INFERENCE_URL:
+    print(f"Using remote inference at {INFERENCE_URL} — skipping local model load")
+else:
+    bootstrap_model()
+
+
+def predict_proba_remote(sentences: List[str]) -> List[float]:
+    """Call MLServer V2 inference API for predict_proba."""
+    url = f"{INFERENCE_URL}/v2/models/guidelines-mlp/infer"
+    payload = {
+        "inputs": [
+            {
+                "name": "predict_input",
+                "datatype": "BYTES",
+                "shape": [len(sentences)],
+                "data": sentences,
+                "parameters": {"content_type": "str"},
+            }
+        ],
+        "outputs": [{"name": "predict_proba"}],
+    }
+    resp = requests.post(url, json=payload, timeout=30)
+    resp.raise_for_status()
+    output = resp.json()["outputs"][0]
+    data = output["data"]
+    # Shape [N, 2]: pairs of (neg_prob, pos_prob) — extract positive class
+    return [data[i * 2 + 1] for i in range(len(sentences))]
 
 
 def fetch_pdf_text(url: str, timeout: int = 30) -> str:
@@ -618,9 +645,12 @@ def prohibited_symbols():
             }
         )
 
-    # Get model
-    with model_lock:
-        probs = clf.predict_proba(sentences)[:, 1]
+    # Get model predictions
+    if INFERENCE_URL:
+        probs = predict_proba_remote(sentences)
+    else:
+        with model_lock:
+            probs = clf.predict_proba(sentences)[:, 1]
 
     # Parse doc, sentence by sentence
     # For each sentence, is the probability > threshold

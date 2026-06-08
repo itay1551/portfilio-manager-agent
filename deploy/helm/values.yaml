@@ -7,6 +7,7 @@ image:
     risk: risk
     portfolio: portfolio
     guidelines: guidelines
+    guidelinesModel: guidelines-model
 replicas: 1
 ui:
   orchestratorUrl: ""
@@ -20,3 +21,6 @@ serverless:
   maxScale: "5"
   concurrency: 10
   timeoutSeconds: 60
+minio:
+  rootUser: minioadmin
+  rootPassword: minioadmin

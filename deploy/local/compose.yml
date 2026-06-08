@@ -52,6 +52,44 @@ services:
       PORT: "7002"
       PYTHONUNBUFFERED: "1"
     restart: unless-stopped
+  minio:
+    image: docker.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-data:/data
+    restart: unless-stopped
+  model-upload:
+    image: docker.io/minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_started
+      mlserver:
+        condition: service_started
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        for i in $$(seq 1 30); do
+          mc alias set minio http://minio:9000 minioadmin minioadmin && break
+          echo "Waiting for MinIO... ($$i/30)"
+          sleep 2
+        done
+        mc mb --ignore-existing minio/models
+        echo "MinIO bucket ready (model served from MLServer image locally)"
+    restart: "no"
+  mlserver:
+    build:
+      context: ../..
+      dockerfile: tools/guidelines-model/Dockerfile
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
   guidelines:
     build:
       context: ../../tools/guidelines/src
@@ -60,8 +98,12 @@ services:
     environment:
       PORT: "7003"
       PYTHONUNBUFFERED: "1"
-      MODEL_PATH: "models/investment-guidelines-mlp.joblib"
+      INFERENCE_URL: "http://mlserver:8080"
     volumes:
-      - ../../models:/app/models:ro,z
       - ../../tools/guidelines/docs:/app/docs:ro,z
+    depends_on:
+      mlserver:
+        condition: service_started
     restart: unless-stopped
+volumes:
+  minio-data:
