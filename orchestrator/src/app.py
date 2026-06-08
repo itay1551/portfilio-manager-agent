@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 from openai import OpenAI
 from orchestrator import Orchestrator, HttpToolServer
+import guardrails as gr
 from pipeline import (
     ToolRegistry,
     parse_guidelines,
@@ -163,6 +164,9 @@ def pipeline_email():
         email = generate_draft_email(
             llm_client, model_or_err, portfolio, float(value_at_risk)
         )
+        output_check = gr.check_output("generate draft email", email)
+        if not output_check.allowed:
+            return jsonify({"error": output_check.detail}), 422
         return jsonify({"draft_email": email}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -193,6 +197,10 @@ def pipeline():
             qty_symbols,
             max_var,
         )
+        email = result.get("draft_email", "")
+        output_check = gr.check_output("generate draft email", email)
+        if not output_check.allowed:
+            result["draft_email"] = output_check.detail
         result["context"] = build_context_from_pipeline(result)
         return jsonify(result), 200
     except Exception as e:
@@ -210,6 +218,10 @@ def chat():
     if llm_client is None:
         return jsonify({"error": model_or_err}), 400
     llm_model = model_or_err
+
+    input_check = gr.check_input(user)
+    if not input_check.allowed:
+        return jsonify({"error": input_check.detail}), 422
 
     system = payload.get("system", PHASE2_SYSTEM)
     temperature = float(payload.get("temperature", 0.2))
@@ -269,6 +281,10 @@ def chat():
                 except Exception as e:
                     app.logger.warning(f"Draft email regeneration failed: {e}")
 
+            output_check = gr.check_output(user, result["content"] or "")
+            if not output_check.allowed:
+                result["content"] = output_check.detail
+
             dt = time.time() - t0
             tool_history = server_tool_history + result["tool_history"]
             return jsonify(
@@ -287,6 +303,11 @@ def chat():
         # Legacy free-form agentic chat (all tools)
         orchestrator.refresh_tools()
         result = orchestrator.chat_agentic(system, user, temperature=temperature)
+
+        output_check = gr.check_output(user, result["content"] or "")
+        if not output_check.allowed:
+            result["content"] = output_check.detail
+
         dt = time.time() - t0
         return jsonify(
             {
