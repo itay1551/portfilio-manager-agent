@@ -1,0 +1,8 @@
+define flow check financial topic
+  $result = execute check_financial_topic
+  if $result == "blocked"
+    bot inform off topic
+    stop
+
+define bot inform off topic
+  "I can only help with investment and portfolio-related questions. Please ask about your portfolio, risk, or investment guidelines."
