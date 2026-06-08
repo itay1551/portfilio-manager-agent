@@ -1,0 +1,32 @@
+{{- if .Values.guardrails.enabled }}
+apiVersion: trustyai.opendatahub.io/v1alpha1
+kind: NemoGuardrails
+metadata:
+  name: guardrails
+  namespace: {{ .Values.namespace }}
+  annotations:
+    security.opendatahub.io/enable-auth: "true"
+spec:
+  nemoConfigs:
+    - name: guardrails-config
+      configMaps:
+        - guardrails-config
+  env:
+    - name: OPENAI_API_KEY
+      value: not-used
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guardrails-internal
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: guardrails
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP
+{{- end }}
