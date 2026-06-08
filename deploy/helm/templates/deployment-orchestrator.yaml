@@ -16,6 +16,7 @@ spec:
       containers:
         - name: container
           image: {{ .Values.image.repository }}:{{ .Values.image.tags.orchestrator }}
+          imagePullPolicy: Always
           ports:
             - containerPort: 5000
               protocol: TCP
@@ -26,3 +27,7 @@ spec:
               value: "1"
             - name: TOOL_SERVERS
               value: "http://investment-advisor-agent-risk:7001,http://investment-advisor-agent-portfolio:7002,http://investment-advisor-agent-guidelines:7003"
+            {{- if .Values.guardrails.enabled }}
+            - name: GUARDRAILS_URL
+              value: "http://guardrails-internal:8000"
+            {{- end }}

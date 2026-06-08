@@ -24,3 +24,5 @@ serverless:
 minio:
   rootUser: minioadmin
   rootPassword: minioadmin
+guardrails:
+  enabled: true

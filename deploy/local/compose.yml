@@ -26,6 +26,7 @@ services:
       PYTHONUNBUFFERED: "1"
       TOOL_SERVERS: >-
         http://risk:7001, http://portfolio:7002, http://guidelines:7003
+      GUARDRAILS_URL: "http://guardrails:8000"
     depends_on:
       risk:
         condition: service_started
@@ -33,6 +34,20 @@ services:
         condition: service_started
       guidelines:
         condition: service_started
+      guardrails:
+        condition: service_started
+    restart: unless-stopped
+  guardrails:
+    build:
+      context: ../../tools/guardrails/src
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      PYTHONUNBUFFERED: "1"
+      GUARDRAILS_CONFIG_PATH: "/config"
+    volumes:
+      - ../../tools/guardrails/config:/config:ro,z
     restart: unless-stopped
   risk:
     build:
