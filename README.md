@@ -1,6 +1,6 @@
-# Build compliant investment portfolios with AI-powered risk management
+# Build compliant investment portfolios with AI risk management
 
-An AI-powered investment advisor that combines a language model with specialized financial tool agents to automate portfolio construction, compliance checking, and risk analysis. The system parses client investment guidelines, builds compliant portfolios, calculates Value at Risk, and generates client-ready communications — then lets you iterate through agentic chat.
+AI multi-agent system that automates portfolio construction, compliance checking, and risk analysis for investment advisors.
 
 ## Table of contents
 
@@ -109,10 +109,12 @@ NOTE: This quickstart assumes a large language model is already deployed in your
 
 ### Minimum hardware requirements
 
-CPU: 2+ cores
-Memory: 4Gi
-Storage: 10Gi
-- **Optional:** GPU — required only if you plan to deploy your own model on OpenShift AI, for deployment refer to [References](#references).
+**Application:**
+- CPU: 2 vCPU (request) / 4 vCPU (limit)
+- Memory: 4 GiB (request) / 8 GiB (limit)
+- Storage: 10 GiB
+
+> **Note:** GPU is not required for the application itself. If you plan to deploy your own LLM on OpenShift AI, see [References](#references) for model serving guidance — GPU requirements depend on the model you choose.
 
 ### Minimum software requirements
 
@@ -142,8 +144,13 @@ Storage: 10Gi
 
 ### Quick Start - OpenShift Deployment
 
-For production deployment on OpenShift clusters:
+1. Clone the repository:
+```bash
+git clone https://github.com/rh-ai-quickstart/investment-advisor-agent.git
+cd investment-advisor-agent
+```
 
+2. Deploy to OpenShift:
 ```bash
 make deploy-cluster
 ```
@@ -231,6 +238,8 @@ helm uninstall investment-advisor-agent -n investment-advisor-agent
 
 ## Tags
 
+* Title: Build compliant investment portfolios with AI risk management
+* Description: AI multi-agent system that automates portfolio construction, compliance checking, and risk analysis for investment advisors.
 * Industry: Financial Services
 * Product: Red Hat OpenShift AI
 * Contributor org: Red Hat
