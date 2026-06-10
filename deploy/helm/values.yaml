@@ -26,5 +26,3 @@ guardrails:
 minio:
   rootUser: minioadmin
   rootPassword: minioadmin
-guardrails:
-  enabled: true
