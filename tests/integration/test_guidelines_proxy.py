@@ -9,6 +9,7 @@ from .conftest import ORCH_BASE, UI_API_BASE, post_json
 
 
 @pytest.mark.integration
+@pytest.mark.requires_controllers
 def test_guidelines_ui_matches_direct_orchestrator(
     http_client: httpx.Client, guidelines_payload: dict[str, str]
 ):
