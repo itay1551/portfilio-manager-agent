@@ -19,6 +19,9 @@ metadata:
   name: orchestrator
   namespace: {{ .Values.namespace }}
 spec:
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
   to:
     kind: Service
     name: orchestrator
