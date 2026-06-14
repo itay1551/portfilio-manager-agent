@@ -62,6 +62,11 @@ An AI multi-agent system that automates the end-to-end portfolio construction wo
 * Red Hat OpenShift + Helm — production deployment.
 * Optional: Knative — serverless agent auto-scaling.
 
+#### Red Hat OpenShift AI
+
+* **Model Serving (KServe)** — serves the scikit-learn MLP classifier as an InferenceService (MLServer sklearn runtime, S3/MinIO storage).
+* **NeMo Guardrails (TrustyAI)** — input/output filtering that blocks sensitive data and off-topic requests.
+
 ### Architecture diagrams
 
 #### Phase 1: Deterministic Pipeline
