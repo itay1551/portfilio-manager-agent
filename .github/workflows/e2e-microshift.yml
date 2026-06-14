@@ -14,6 +14,11 @@ on:
       - 'ci/**'
       - 'tests/integration/**'
   workflow_dispatch:
+    inputs:
+      skip_image_cache:
+        description: 'Skip image build/cache — pull from registry at runtime (faster iteration)'
+        type: boolean
+        default: false
 env:
   KUBECONFIG: /tmp/microshift-kubeconfig
   NAMESPACE: ci-e2e
@@ -32,29 +37,37 @@ jobs:
         run: |
           TAG=$(curl -sf --max-time 30 \
             "https://api.github.com/repos/microshift-io/microshift/releases/latest" \
-            | jq -r .tag_name)
+            | jq -r .tag_name) || true
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            TAG="4.21.0_g29f429c21_4.21.0_okd_scos.ec.15"
+            echo "::warning::GitHub API rate-limited; using fallback tag $TAG"
+          fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
       - name: Cache MicroShift bootc image
+        if: ${{ !inputs.skip_image_cache }}
         uses: actions/cache@v4
         with:
           path: /tmp/cache/microshift.tar
           key: microshift-bootc-${{ steps.microshift-tag.outputs.tag }}
       - name: Cache app container images
+        if: ${{ !inputs.skip_image_cache }}
         uses: actions/cache@v4
         with:
           path: /tmp/cache/app-images.tar
-          key: app-images-${{ hashFiles('build-script/**', 'deploy/helm/values.yaml') }}
-          restore-keys: app-images-
+          key: app-images-v2-${{ hashFiles('build-script/**', 'deploy/helm/values.yaml') }}
+          restore-keys: app-images-v2-
       - name: Cache guidelines-model image
+        if: ${{ !inputs.skip_image_cache }}
         uses: actions/cache@v4
         with:
           path: /tmp/cache/guidelines-model.tar
-          key: guidelines-model-${{ hashFiles('tools/guidelines-model/**', 'models/investment-guidelines-mlp.joblib') }}
+          key: guidelines-model-v2-${{ hashFiles('tools/guidelines-model/**', 'models/investment-guidelines-mlp.joblib') }}
       - name: Cache tests image
+        if: ${{ !inputs.skip_image_cache }}
         uses: actions/cache@v4
         with:
           path: /tmp/cache/tests.tar
-          key: tests-image-${{ hashFiles('tests/Dockerfile', 'tests/requirements.txt', 'orchestrator/src/requirements.txt') }}
+          key: tests-image-v2-${{ hashFiles('tests/Dockerfile', 'tests/requirements.txt', 'orchestrator/src/requirements.txt') }}
       - name: Cache oc CLI
         id: cache-oc
         uses: actions/cache@v4
@@ -79,61 +92,69 @@ jobs:
       - name: Setup MicroShift and build images (parallel)
         run: |
           export MICROSHIFT_IMAGE_CACHE=/tmp/cache/microshift.tar
+          export MICROSHIFT_TAG="${{ steps.microshift-tag.outputs.tag }}"
           ci/setup-microshift.sh &
           MICROSHIFT_PID=$!
-          mkdir -p /tmp/cache
 
-          # guidelines-model: build only if cache missed
-          if [ -f /tmp/cache/guidelines-model.tar ]; then
-            echo ">>> Loading guidelines-model from cache..."
-            sudo podman load -i /tmp/cache/guidelines-model.tar
-          else
-            echo ">>> Building guidelines-model (cache miss)..."
-            sudo podman build -t "${APP_REPO}:guidelines-model" \
-              -f tools/guidelines-model/Dockerfile .
-            sudo podman save -o /tmp/cache/guidelines-model.tar \
-              "${APP_REPO}:guidelines-model"
-            sudo chown "$(id -u):$(id -g)" /tmp/cache/guidelines-model.tar
-          fi
+          FAST="${{ inputs.skip_image_cache }}"
+          if [ "$FAST" != "true" ]; then
+            mkdir -p /tmp/cache
 
-          # tests: build only if cache missed
-          if [ -f /tmp/cache/tests.tar ]; then
-            echo ">>> Loading tests image from cache..."
-            sudo podman load -i /tmp/cache/tests.tar
-          else
-            echo ">>> Building tests image (cache miss)..."
-            sudo podman build -t "${APP_REPO}:tests" \
-              -f tests/Dockerfile .
-            sudo podman save -o /tmp/cache/tests.tar "${APP_REPO}:tests"
-            sudo chown "$(id -u):$(id -g)" /tmp/cache/tests.tar
-          fi
+            if [ -f /tmp/cache/guidelines-model.tar ]; then
+              echo ">>> Loading guidelines-model from cache..."
+              sudo podman load -i /tmp/cache/guidelines-model.tar
+            else
+              echo ">>> Building guidelines-model (cache miss)..."
+              sudo podman build -t "${APP_REPO}:guidelines-model" \
+                -f tools/guidelines-model/Dockerfile .
+              sudo podman save -o /tmp/cache/guidelines-model.tar \
+                "${APP_REPO}:guidelines-model"
+              sudo chown "$(id -u):$(id -g)" /tmp/cache/guidelines-model.tar
+            fi
 
-          # app images: pull only if cache missed
-          if [ -f /tmp/cache/app-images.tar ]; then
-            echo ">>> Loading app images from cache..."
-            sudo podman load -i /tmp/cache/app-images.tar
+            if [ -f /tmp/cache/tests.tar ]; then
+              echo ">>> Loading tests image from cache..."
+              sudo podman load -i /tmp/cache/tests.tar
+            else
+              echo ">>> Building tests image (cache miss)..."
+              sudo podman build -t "${APP_REPO}:tests" \
+                -f tests/Dockerfile .
+              sudo podman save -o /tmp/cache/tests.tar "${APP_REPO}:tests"
+              sudo chown "$(id -u):$(id -g)" /tmp/cache/tests.tar
+            fi
+
+            if [ -f /tmp/cache/app-images.tar ]; then
+              echo ">>> Loading app images from cache..."
+              sudo podman load -i /tmp/cache/app-images.tar
+            else
+              echo ">>> Pulling app images (cache miss)..."
+              for tag in ui orchestrator risk portfolio guidelines; do
+                sudo podman pull "${APP_REPO}:${tag}"
+              done
+              sudo podman save -o /tmp/cache/app-images.tar \
+                "${APP_REPO}:ui" \
+                "${APP_REPO}:orchestrator" \
+                "${APP_REPO}:risk" \
+                "${APP_REPO}:portfolio" \
+                "${APP_REPO}:guidelines"
+              sudo chown "$(id -u):$(id -g)" /tmp/cache/app-images.tar
+            fi
           else
-            echo ">>> Pulling app images (cache miss)..."
-            for tag in ui orchestrator risk portfolio guidelines; do
-              sudo podman pull "${APP_REPO}:${tag}"
-            done
-            sudo podman save -o /tmp/cache/app-images.tar \
-              "${APP_REPO}:ui" \
-              "${APP_REPO}:orchestrator" \
-              "${APP_REPO}:risk" \
-              "${APP_REPO}:portfolio" \
-              "${APP_REPO}:guidelines"
-            sudo chown "$(id -u):$(id -g)" /tmp/cache/app-images.tar
+            echo ">>> Fast mode: pulling tests image only..."
+            sudo podman pull "${APP_REPO}:tests"
           fi
 
           echo ">>> Waiting for MicroShift setup to finish..."
           wait $MICROSHIFT_PID
 
-          echo ">>> Loading app images into MicroShift..."
-          for tag in ui orchestrator risk portfolio guidelines guidelines-model; do
-            sudo podman save "${APP_REPO}:${tag}" \
-              | sudo podman exec -i microshift-okd-1 podman load
-          done
+          if [ "$FAST" != "true" ]; then
+            echo ">>> Loading app images into MicroShift (per-image)..."
+            for tag in ui orchestrator risk portfolio guidelines guidelines-model; do
+              echo "  Loading ${tag}..."
+              sudo podman save "${APP_REPO}:${tag}" \
+                | sudo podman exec -i microshift-okd-1 podman load
+            done
+          fi
       - name: Create namespace and prerequisites
         run: |
           oc create namespace "$NAMESPACE" 2>/dev/null || true
@@ -160,15 +181,15 @@ jobs:
           done
 
           echo "Waiting for minio (best-effort, needs PV provisioner)..."
-          oc rollout status deployment/minio -n "$NAMESPACE" --timeout=180s || true
+          oc rollout status deployment/minio -n "$NAMESPACE" --timeout=30s || true
 
           echo "Waiting for model-upload Job (best-effort, needs minio)..."
           oc wait --for=condition=Complete job/model-upload \
-            -n "$NAMESPACE" --timeout=180s || true
+            -n "$NAMESPACE" --timeout=30s || true
 
           echo "Waiting for InferenceService (best-effort, needs KServe controller)..."
           oc wait --for=condition=Ready isvc/guidelines-mlp \
-            -n "$NAMESPACE" --timeout=60s || true
+            -n "$NAMESPACE" --timeout=10s || true
       - name: Setup route networking
         run: |
           MICROSHIFT_IP=$(sudo podman inspect microshift-okd-1 \
@@ -192,6 +213,10 @@ jobs:
         run: |
           sudo podman run --rm --network=host \
             -v "${{ github.workspace }}:/workspace:ro,Z" \
+            -v /usr/local/bin/oc:/usr/local/bin/oc:ro \
+            -v "${KUBECONFIG}:${KUBECONFIG}:ro" \
+            -e KUBECONFIG="${KUBECONFIG}" \
+            -e NAMESPACE="${NAMESPACE}" \
             -e UI_BASE="${{ steps.routes.outputs.UI_BASE }}" \
             -e ORCH_BASE="${{ steps.routes.outputs.ORCH_BASE }}" \
             -e GUARDRAILS_BASE="${{ steps.routes.outputs.GUARDRAILS_BASE }}" \
@@ -203,6 +228,10 @@ jobs:
         run: |
           sudo podman run --rm --network=host \
             -v "${{ github.workspace }}:/workspace:ro,Z" \
+            -v /usr/local/bin/oc:/usr/local/bin/oc:ro \
+            -v "${KUBECONFIG}:${KUBECONFIG}:ro" \
+            -e KUBECONFIG="${KUBECONFIG}" \
+            -e NAMESPACE="${NAMESPACE}" \
             -e UI_BASE="${{ steps.routes.outputs.UI_BASE }}" \
             -e ORCH_BASE="${{ steps.routes.outputs.ORCH_BASE }}" \
             -e GUARDRAILS_BASE="${{ steps.routes.outputs.GUARDRAILS_BASE }}" \
@@ -221,7 +250,8 @@ jobs:
           oc get events -n "$NAMESPACE" --sort-by=.lastTimestamp | tail -30 || true
           echo ""
           echo "=== Pod logs ==="
-          for dep in ui orchestrator investment-advisor-agent-guidelines; do
+          for dep in ui orchestrator investment-advisor-agent-risk \
+                     investment-advisor-agent-portfolio investment-advisor-agent-guidelines; do
             echo "--- $dep ---"
             oc logs "deploy/$dep" -n "$NAMESPACE" --tail=50 || true
           done

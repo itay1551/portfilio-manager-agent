@@ -5,10 +5,9 @@ RUN microdnf -y upgrade --setopt=install_weak_deps=0 && \
     microdnf -y install ca-certificates gcc-c++ python3.12-devel && \
     microdnf clean all
 
-RUN python -m pip install --upgrade pip
-
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
+RUN python -m pip install --upgrade pip && \
+    pip install --no-cache-dir -r /tmp/requirements.txt && \
     python -m spacy download en_core_web_lg && \
     microdnf -y remove gcc-c++ python3.12-devel && \
     microdnf clean all

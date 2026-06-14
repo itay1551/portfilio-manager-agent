@@ -39,14 +39,18 @@ else
 fi
 
 # ── 2. Pull the latest bootc image (or load from cache) ─────────────
-log "Fetching latest MicroShift release tag..."
-TAG=$(curl -sf --max-time 30 \
-	"https://api.github.com/repos/microshift-io/microshift/releases/latest" |
-	jq -r .tag_name)
-
-if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
-	echo "ERROR: Could not determine latest MicroShift release tag"
-	exit 1
+if [ -n "${MICROSHIFT_TAG:-}" ]; then
+	TAG="$MICROSHIFT_TAG"
+	log "Using pre-resolved MicroShift tag: $TAG"
+else
+	log "Fetching latest MicroShift release tag..."
+	TAG=$(curl -sf --max-time 30 \
+		"https://api.github.com/repos/microshift-io/microshift/releases/latest" |
+		jq -r .tag_name)
+	if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+		echo "ERROR: Could not determine latest MicroShift release tag"
+		exit 1
+	fi
 fi
 
 IMAGE="ghcr.io/microshift-io/microshift:${TAG}"
