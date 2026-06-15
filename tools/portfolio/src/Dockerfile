@@ -7,16 +7,11 @@ RUN microdnf -y upgrade --setopt=install_weak_deps=0 && \
     microdnf -y install ca-certificates && \
     microdnf clean all
 
-# Modern pip helps wheel resolution
-RUN python -m pip install --upgrade pip
-
-# Heavy libs from wheels only
-RUN pip install --no-cache-dir --only-binary=:all: \
-       numpy scipy scikit-learn
-
-# Everything else (allow sdists like multitasking)
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN python -m pip install --upgrade pip && \
+    pip install --no-cache-dir --only-binary=:all: \
+        numpy scipy scikit-learn && \
+    pip install --no-cache-dir -r /tmp/requirements.txt
 
 # App code
 WORKDIR /app

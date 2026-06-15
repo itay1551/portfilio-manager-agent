@@ -15,6 +15,7 @@ NAMESPACE = os.getenv("NAMESPACE", "investment-advisor-agent-itay")
 
 @pytest.mark.integration
 @pytest.mark.cluster_only
+@pytest.mark.requires_controllers
 def test_inferenceservice_ready():
     """InferenceService guidelines-mlp must report Ready on the cluster."""
     result = subprocess.run(
@@ -37,6 +38,7 @@ def test_inferenceservice_ready():
 
 @pytest.mark.integration
 @pytest.mark.cluster_only
+@pytest.mark.requires_controllers
 def test_model_upload_job_completed():
     """The model-upload Job must have succeeded (or been TTL-cleaned after success)."""
     result = subprocess.run(
@@ -77,6 +79,7 @@ def test_model_upload_job_completed():
 
 
 @pytest.mark.integration
+@pytest.mark.requires_controllers
 def test_guidelines_pipeline_with_model_serving(
     http_client: httpx.Client, guidelines_payload: dict[str, str]
 ):
@@ -92,6 +95,7 @@ def test_guidelines_pipeline_with_model_serving(
 
 
 @pytest.mark.integration
+@pytest.mark.requires_controllers
 def test_guidelines_direct_orchestrator_with_model_serving(
     http_client: httpx.Client, guidelines_payload: dict[str, str]
 ):

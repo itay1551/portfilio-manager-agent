@@ -21,6 +21,8 @@ serverless:
   maxScale: "5"
   concurrency: 10
   timeoutSeconds: 60
+guidelines:
+  inferenceUrl: "http://guidelines-mlp:80"
 guardrails:
   enabled: true
 minio:

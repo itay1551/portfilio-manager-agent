@@ -47,6 +47,7 @@ def test_guardrails_configmap_exists():
 
 @pytest.mark.integration
 @pytest.mark.cluster_only
+@pytest.mark.requires_controllers
 def test_nemoguardrails_ready():
     """NemoGuardrails CR must exist and report Ready."""
     result = _oc(
@@ -67,6 +68,7 @@ def test_nemoguardrails_ready():
 
 @pytest.mark.integration
 @pytest.mark.cluster_only
+@pytest.mark.requires_controllers
 def test_guardrails_pod_running():
     """Guardrails pod must be Running with all containers ready."""
     result = _oc(
@@ -164,6 +166,7 @@ def test_orchestrator_image_has_guardrails_module():
 
 @pytest.mark.integration
 @pytest.mark.cluster_only
+@pytest.mark.requires_controllers
 def test_guardrails_reachable_from_orchestrator():
     """Orchestrator pod must be able to reach the guardrails service."""
     result = _oc(
@@ -280,6 +283,7 @@ def test_guardrails_blocks_off_topic(http_client: httpx.Client):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_controllers
 def test_chat_blocked_by_guardrails_pii(http_client: httpx.Client):
     """Chat endpoint should return 422 when user sends PII."""
     if not GUARDRAILS_BASE:
@@ -302,6 +306,7 @@ def test_chat_blocked_by_guardrails_pii(http_client: httpx.Client):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_controllers
 def test_chat_blocked_by_guardrails_off_topic(http_client: httpx.Client):
     """Chat endpoint should return 422 for off-topic requests."""
     if not GUARDRAILS_BASE:

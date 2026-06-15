@@ -23,6 +23,12 @@ spec:
           ports:
             - containerPort: 7003
               protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /tools
+              port: 7003
+            initialDelaySeconds: 5
+            periodSeconds: 5
           env:
             - name: PORT
               value: "7003"
@@ -31,7 +37,7 @@ spec:
             - name: MODEL_PATH
               value: "models/investment-guidelines-mlp.joblib"
             - name: INFERENCE_URL
-              value: "http://guidelines-mlp:80"
+              value: {{ .Values.guidelines.inferenceUrl | quote }}
           volumeMounts:
             - name: guidelines-docs
               mountPath: /app/docs/client-100/investment-guidelines.pdf

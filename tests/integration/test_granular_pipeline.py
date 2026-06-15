@@ -15,6 +15,7 @@ from .conftest import (
 
 
 @pytest.mark.integration
+@pytest.mark.requires_controllers
 def test_granular_pipeline_portfolio_and_var(
     http_client: httpx.Client, guidelines_payload: dict[str, str]
 ):

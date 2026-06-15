@@ -1,6 +1,6 @@
 -include .env
 
-.PHONY: deploy-local deploy-cluster test-unit test-integration test-integration-llm test-cluster test-cluster-llm
+.PHONY: deploy-local deploy-cluster test-unit test-integration test-integration-llm test-cluster test-cluster-llm test-e2e
 
 deploy-local:
 	podman compose --env-file .env -f deploy/local/compose.yml up --build
@@ -15,7 +15,8 @@ endif
 		$(if $(OPENAI_API_ENDPOINT),--set-string "ui.llm.endpoint=$(OPENAI_API_ENDPOINT)") \
 		$(if $(OPENAI_API_TOKEN),--set-string "ui.llm.apiToken=$(OPENAI_API_TOKEN)") \
 		$(if $(OPENAI_MODEL),--set-string "ui.llm.model=$(OPENAI_MODEL)") \
-		$(if $(VITE_ORCHESTRATOR_URL),--set-string "ui.orchestratorUrl=$(VITE_ORCHESTRATOR_URL)")
+		$(if $(VITE_ORCHESTRATOR_URL),--set-string "ui.orchestratorUrl=$(VITE_ORCHESTRATOR_URL)") \
+		$(HELM_ARGS)
 
 test-unit:
 	pytest tests/unit -m unit -v
@@ -43,3 +44,6 @@ endif
 	ORCH_BASE=http://$(shell oc get route orchestrator -n $(NAMESPACE) -o jsonpath='{.spec.host}') \
 	GUARDRAILS_BASE=http://$(shell oc get route guardrails -n $(NAMESPACE) -o jsonpath='{.spec.host}' 2>/dev/null) \
 	pytest tests/integration -m "integration and not local_only" -v
+
+test-e2e:
+	ci/setup-microshift.sh

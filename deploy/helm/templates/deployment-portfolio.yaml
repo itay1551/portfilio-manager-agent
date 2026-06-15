@@ -19,6 +19,12 @@ spec:
           ports:
             - containerPort: 7002
               protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /tools
+              port: 7002
+            initialDelaySeconds: 5
+            periodSeconds: 5
           env:
             - name: PORT
               value: "7002"
